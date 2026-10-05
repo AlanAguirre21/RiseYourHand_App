@@ -4,3 +4,4 @@ node_modules/
 # Credenciales privadas
 .env
 .env.*
+!.env.example
