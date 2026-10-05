@@ -14,4 +14,9 @@ export function formatAnswer(question, value) {
   return value;
 }
 
-export const formatDays = value => (value == null ? '—' : `${value} ${Math.abs(value) === 1 ? 'día' : 'días'}`);
+// Computed fields come as a number of days or as a ready-made text
+export function formatComputed(value) {
+  if (value == null) return '—';
+  if (typeof value !== 'number') return value;
+  return `${value} ${Math.abs(value) === 1 ? 'día' : 'días'}`;
+}

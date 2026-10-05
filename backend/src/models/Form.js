@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 export const QUESTION_TYPES = ['open', 'single', 'multiple', 'date'];
-export const COMPUTED_OPS = ['days_since', 'days_until'];
+export const COMPUTED_OPS = ['days_since', 'days_until', 'expiration_status'];
 
 const questionSchema = new mongoose.Schema({
   key: { type: String, required: true },          // stable id: "q1", "area_comment"

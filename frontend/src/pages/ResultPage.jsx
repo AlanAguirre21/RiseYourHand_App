@@ -3,7 +3,7 @@ import PageContainer from '../components/layout/PageContainer.jsx';
 import Avatar from '../components/chat/Avatar.jsx';
 import Button from '../components/Button.jsx';
 import { PANEL } from '../constants/styles.js';
-import { flattenQuestions, formatAnswer, formatDays } from '../utils/answers.js';
+import { flattenQuestions, formatAnswer, formatComputed } from '../utils/answers.js';
 
 export default function ResultPage() {
   // Filled by ChatPage after sending; missing when the page is opened directly or reloaded
@@ -16,7 +16,7 @@ export default function ResultPage() {
   const byKey = new Map(response.answers.map(a => [a.questionKey, a.value]));
   const details = [
     ...flattenQuestions(form).map(q => [q.key, q.text, formatAnswer(q, byKey.get(q.key))]),
-    ...response.computed.map(c => [c.key, c.text, formatDays(c.value)]),
+    ...response.computed.map(c => [c.key, c.text, formatComputed(c.value)]),
   ];
 
   return (

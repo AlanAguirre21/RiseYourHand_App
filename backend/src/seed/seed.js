@@ -1,17 +1,15 @@
 import 'dotenv/config';
 import mongoose from 'mongoose';
 import User from '../models/User.js';
-import { ensureForm } from '../services/form.service.js';
+import { ensureForm, FORM_STATUS_MESSAGES } from '../services/form.service.js';
 import { ensureAdmin } from '../services/user.service.js';
 import form from './form.json' with { type: 'json' };
 
 try {
   await mongoose.connect(process.env.MONGO_URI);
 
-  const created = await ensureForm();
-  console.log(created
-    ? `"${form.key}" v${form.version} created`
-    : `"${form.key}" v${form.version} already exists. To change questions, increment "version".`);
+  const formStatus = await ensureForm();
+  console.log(`"${form.key}" v${form.version} ${FORM_STATUS_MESSAGES[formStatus] ?? 'is up to date'}`);
 
   // Drops indexes the schema no longer has (the old unique "username") and builds the unique "name" one
   await User.syncIndexes();

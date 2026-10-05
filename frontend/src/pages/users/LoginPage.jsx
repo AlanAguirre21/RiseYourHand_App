@@ -5,7 +5,7 @@ import StatusMessage from '../../components/StatusMessage.jsx';
 import Button from '../../components/Button.jsx';
 import { Input, Label } from '../../components/Input.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
-import { PANEL } from '../../constants/styles.js';
+import { PANEL, TILE } from '../../constants/styles.js';
 import zfLogo from '../../assets/ZF_logo.svg';
 
 export default function LoginPage() {
@@ -37,16 +37,20 @@ export default function LoginPage() {
   return (
     <PageContainer>
       <form onSubmit={handleSubmit} className={`mt-4 p-6 sm:mt-8 sm:p-8 ${PANEL}`}>
-        <hgroup className="flex flex-col items-center border-b border-white/60 pb-6 text-center">
-          <p className="text-xs font-semibold leading-none tracking-wide text-zf-blue sm:text-sm">
-            ZF ESL
-          </p>
-          <h1 className="mt-1 flex items-center gap-2.5 text-3xl font-semibold text-text sm:text-4xl">
-            <img src={zfLogo} alt="" className="size-[1em] object-contain" />
-            Formulario "manitas"
-          </h1>
-          <h2 className="mt-3 text-base font-medium text-text-muted">Iniciar sesión</h2>
-        </hgroup>
+        <header className="flex flex-col items-center border-b border-white/60 pb-6 text-center">
+          <span className={`neu-raised flex h-16 w-16 items-center justify-center ${TILE}`}>
+            <img src={zfLogo} alt="" className="size-10 object-contain" />
+          </span>
+          <hgroup className="mt-4 max-w-full">
+            <p className="text-xs font-semibold leading-none tracking-wide text-zf-blue">
+              ZF ESL
+            </p>
+            <h1 className="mt-1.5 text-balance break-words text-2xl font-semibold text-text sm:text-3xl">
+              Formulario "manitas"
+            </h1>
+          </hgroup>
+          <h2 className="mt-2 text-sm font-medium text-text-muted">Iniciar sesión</h2>
+        </header>
 
         <div className="mt-6">
           <Label htmlFor="name">Nombre</Label>

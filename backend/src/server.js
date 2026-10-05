@@ -1,13 +1,14 @@
 import 'dotenv/config';
 import app from './app.js';
 import connectDB from './config/db.js';
-import { ensureForm } from './services/form.service.js';
+import { ensureForm, FORM_STATUS_MESSAGES } from './services/form.service.js';
 import { ensureAdmin } from './services/user.service.js';
 
 const PORT = process.env.PORT || 3000;
 
 await connectDB();
-if (await ensureForm()) console.log('Form created from seed/form.json');
+const formStatus = await ensureForm();
+if (formStatus) console.log(`Form ${FORM_STATUS_MESSAGES[formStatus]}`);
 
 const defaultAdmin = await ensureAdmin();
 if (defaultAdmin) console.log(`No admin found: "${defaultAdmin}" is now an admin`);

@@ -1,5 +1,12 @@
 import Form, { QUESTION_TYPES, COMPUTED_OPS } from '../models/Form.js';
+import Response from '../models/Response.js';
 import formData from '../seed/form.json' with { type: 'json' };
+
+export const FORM_STATUS_MESSAGES = {
+  created: 'created from seed/form.json',
+  updated: 'updated from seed/form.json (it had no responses yet)',
+  outdated: 'differs from seed/form.json but already has responses: increment "version" to apply the changes',
+};
 
 // The project has a single form: the one defined in seed/form.json
 export const FORM_KEY = formData.key;
@@ -33,13 +40,31 @@ export function validate(form) {
   }
 }
 
-// Stores the form.json version if it is not in the database yet. Returns true when it was created
+// Same shape for form.json and for the stored document, with the schema defaults applied to both
+const definitionOf = (form) => {
+  const { title, sections } = new Form(form).toObject();
+  return JSON.stringify({ title, sections });
+};
+
+// Keeps the database in step with form.json. Returns what happened:
+//   'created'  - this version was not stored yet
+//   'updated'  - form.json changed and nobody had answered this version, so it was replaced
+//   'outdated' - form.json changed but this version already has responses: increment "version"
+//   null       - nothing to do
 export const ensureForm = async () => {
   validate(formData);
-  const exists = await Form.exists({ key: formData.key, version: formData.version });
-  if (exists) return false;
-  await Form.create(formData);
-  return true;
+  const stored = await Form.findOne({ key: formData.key, version: formData.version }).lean();
+  if (!stored) {
+    await Form.create(formData);
+    return 'created';
+  }
+  if (definitionOf(stored) === definitionOf(formData)) return null;
+
+  const answered = await Response.exists({ formKey: formData.key, formVersion: formData.version });
+  if (answered) return 'outdated';
+
+  await Form.replaceOne({ _id: stored._id }, formData, { runValidators: true });
+  return 'updated';
 };
 
 export const findVersion = (version) => Form.findOne({ key: FORM_KEY, version }).lean();

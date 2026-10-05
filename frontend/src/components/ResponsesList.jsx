@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import StatusMessage from './StatusMessage.jsx';
 import { getForm } from '../api/forms.js';
 import { PANEL } from '../constants/styles.js';
-import { flattenQuestions, formatAnswer, formatDays } from '../utils/answers.js';
+import { flattenQuestions, formatAnswer, formatComputed } from '../utils/answers.js';
 
 const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -50,7 +50,7 @@ export default function ResponsesList({ load, showUser = false, emptyText }) {
               {response.computed.map(c => (
                 <div key={c.key} className="min-w-0">
                   <dt className="text-xs text-text-muted">{c.text}</dt>
-                  <dd className="mt-0.5 font-medium text-text">{formatDays(c.value)}</dd>
+                  <dd className="mt-0.5 font-medium text-text">{formatComputed(c.value)}</dd>
                 </div>
               ))}
             </dl>

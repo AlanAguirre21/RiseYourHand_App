@@ -31,7 +31,7 @@ export default function ChatPage() {
   const [startedAt] = useState(() => new Date());
 
   useEffect(() => {
-    if (response) navigate('/formulario/result', { replace: true, state: { form, response } });
+    if (response) navigate('/formulario/resultado', { replace: true, state: { form, response } });
   }, [response, form, navigate]);
 
   useEffect(() => {

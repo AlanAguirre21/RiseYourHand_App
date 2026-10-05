@@ -2,31 +2,33 @@ import { Link } from 'react-router';
 import PageContainer from '../components/layout/PageContainer.jsx';
 import OptionCard from '../components/OptionCard.jsx';
 import { QUESTIONNAIRE_OPTION } from '../constants/questionnaires.js';
-import { PANEL } from '../constants/styles.js';
+import { PANEL, TILE } from '../constants/styles.js';
 import zfLogo from '../assets/ZF_logo.svg';
 
 export default function HomePage() {
-  const cardBase = `group flex flex-col p-6 ${PANEL}`;
+  const cardBase = `group flex w-full max-w-sm flex-col items-center p-8 text-center ${PANEL}`;
 
   return (
     <PageContainer size="lg">
-      <section className="text-center">
-        <hgroup className="flex flex-col items-center">
-          <p className="text-sm font-semibold leading-none text-zf-blue sm:text-lg">
+      <header className="flex flex-col items-center text-center">
+        <span className={`neu-raised flex h-20 w-20 items-center justify-center ${TILE}`}>
+          <img src={zfLogo} alt="" className="size-12 object-contain" />
+        </span>
+        <hgroup className="mt-5 max-w-full">
+          <p className="text-sm font-semibold leading-none tracking-wide text-zf-blue">
             ZF ESL
           </p>
-          <h1 className="flex items-center gap-3 text-4xl font-semibold text-text sm:gap-5 sm:text-7xl">
-            <img src={zfLogo} alt="" className="size-[1em] object-contain" />
+          <h1 className="mt-2 text-balance break-words text-3xl font-semibold text-text sm:text-5xl">
             Captura de datos "Manitas"
           </h1>
         </hgroup>
 
-        <p className="mx-auto mt-3 max-w-xl text-text-muted">
+        <p className="mt-4 max-w-xl text-balance text-text-muted">
           Este es el formulario "manitas" para agregar una sugerencia o mostrar un punto de alerta en su área de trabajo.
         </p>
-      </section>
+      </header>
 
-      <section className="mt-10 grid gap-4 sm:grid-cols-2">
+      <section className="mt-10 flex flex-wrap justify-center gap-4">
         {QUESTIONNAIRE_OPTION.map(option => (
           <Link
             key={option.key}

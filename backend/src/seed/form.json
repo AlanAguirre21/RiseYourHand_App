@@ -13,7 +13,6 @@
           "options": ["Amarilla", "Roja", "Verde", "NO VIABLE"] },
         { "key": "status", "text": "Selecciona el estatus de la manita", "type": "single",
           "options": ["Not Started", "Started"] },
-        { "key": "alert", "text": "Comentarios adicionales", "type": "open", "required": false },
         { "key": "creation_date", "text": "Fecha de creación", "type": "date" },
         { "key": "expiration_date", "text": "Fecha de vencimiento", "type": "date" },
         { "key": "area", "text": "Selecciona el área de la manita", "type": "single",
@@ -21,6 +20,8 @@
         { "key": "details", "text": "Especifique los detalles de la manita", "type": "open" }
       ],
       "computed": [
+        { "key": "alert", "text": "Situación de la manita",
+          "op": "expiration_status", "source": "expiration_date" },
         { "key": "days_gone", "text": "Días transcurridos desde la creación de la manita",
           "op": "days_since", "source": "creation_date" },
         { "key": "expiration_days", "text": "Días para la expiración de la manita",
