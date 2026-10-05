@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
+import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
+import formRoutes from './routes/form.routes.js';
 import errorHandler from './middlewares/errorHandler.js';
 
 const app = express();
@@ -11,7 +13,9 @@ app.use(express.json());
 
 // Routes
 app.get('/api/health', (req, res) => res.json({ ok: true }));
+app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/form', formRoutes);
 
 // 404 for unmatched routes
 app.use((req, res) => {
