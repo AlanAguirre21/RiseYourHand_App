@@ -1,0 +1,43 @@
+# LevantaMano - Requisitos del proyecto
+#
+# Este es un proyecto Node.js: este archivo es una referencia y NO se instala con pip.
+# Las dependencias se instalan con "npm install" dentro de backend/ y de frontend/;
+# las versiones exactas están fijadas en el package-lock.json de cada carpeta.
+
+# --- Software necesario ---
+Node.js >= 22        (probado con 24.21.0)
+npm                  (incluido con Node.js)
+MongoDB              (local o Atlas)
+
+# --- Backend (backend/package.json) ---
+cors      ^2.8.6
+dotenv    ^18.0.5
+express   ^5.2.1
+mongoose  ^9.10.4
+
+# Desarrollo
+nodemon   ^3.1.14
+
+# --- Frontend (frontend/package.json) ---
+@tailwindcss/vite  ^4.3.3
+lucide-react       ^1.52.0
+react              ^19.2.8
+react-dom          ^19.2.8
+react-router       ^8.4.0
+tailwindcss        ^4.3.3
+
+# Desarrollo
+@types/react          ^19.2.18
+@types/react-dom      ^19.2.7
+@vitejs/plugin-react  ^6.1.1
+oxlint                ^1.81.0
+vite                  ^8.3.0
+
+# --- Variables de entorno (backend/.env) ---
+PORT             Puerto del servidor (por defecto 3000)
+MONGO_URI        Cadena de conexión a MongoDB
+FRONTEND_ORIGIN  Origen del frontend permitido por CORS
+EXPORT_KEY       Clave secreta del enlace de exportación a Power BI
+
+# --- Opcional (frontend/.env) ---
+VITE_API_URL     Dirección del backend (por defecto /api)
