@@ -1,5 +1,5 @@
 import Response from '../models/Response.js';
-import { FORM_KEY, findVersion } from './form.service.js';
+import { FORM_KEY, findVersion, listVersions } from './form.service.js';
 import { computeFields } from '../utils/computed.js';
 
 export const OPEN_MAX_LENGTH = 1000;
@@ -76,4 +76,44 @@ export const list = async (filter = {}) => {
     forms.set(version, await findVersion(version));
   }
   return responses.map((r) => toPublicResponse(r, forms.get(r.formVersion), r.user));
+};
+
+// Every response as one table (header first), newest first: one row per response and one column
+// per question and computed field. The columns cover all the form versions, named after the
+// latest text of each one; a response leaves empty the ones its version did not have
+export const exportTable = async () => {
+  const [responses, versions] = await Promise.all([
+    Response.find({ formKey: FORM_KEY }).sort({ createdAt: -1 }).populate('user', 'name').lean(),
+    listVersions(),
+  ]);
+
+  const forms = new Map(versions.map((f) => [f.version, f]));
+  const questions = new Map();   // key -> text
+  const computed = new Map();
+  for (const section of versions.flatMap((f) => f.sections)) {
+    for (const q of section.questions) questions.set(q.key, q.text);
+    for (const c of section.computed ?? []) computed.set(c.key, c.text);
+  }
+
+  const header = ['ID', 'Fecha de registro', 'Usuario', 'Versión del formulario',
+    ...questions.values(), ...computed.values()];
+
+  const rows = responses.map((r) => {
+    const form = forms.get(r.formVersion);
+    const answers = new Map(r.answers.map((a) => [a.questionKey, a.value]));
+    const fields = new Map((form ? computeFields(form, r.answers) : []).map((c) => [c.key, c.value]));
+    return [
+      String(r._id),
+      r.createdAt.toISOString(),
+      r.user?.name ?? '',
+      r.formVersion,
+      ...[...questions.keys()].map((key) => {
+        const value = answers.get(key);
+        return Array.isArray(value) ? value.join('; ') : value;
+      }),
+      ...[...computed.keys()].map((key) => fields.get(key)),
+    ];
+  });
+
+  return [header, ...rows];
 };

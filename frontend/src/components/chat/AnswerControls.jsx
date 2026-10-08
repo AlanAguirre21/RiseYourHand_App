@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Check, Circle, CircleCheck, SendHorizontal } from 'lucide-react';
 import Avatar from './Avatar.jsx';
 import MenuOption from '../MenuOption.jsx';
+import { Label } from '../Input.jsx';
 
 export const ANSWER_MAX = 1000;
 
@@ -52,6 +53,7 @@ export function AnswerBar({ question, onAnswer, disabled }) {
   const [text, setText] = useState('');
   const choice = isChoice(question);
   const isDate = question.type === 'date';
+  const isOpen = !choice && !isDate;
   const optional = question.required === false;
   const value = text.trim();
   const canSend = !choice && !disabled && value !== '';
@@ -74,6 +76,7 @@ export function AnswerBar({ question, onAnswer, disabled }) {
 
   return (
     <form onSubmit={handleSubmit} className="shrink-0 border-t border-white/40 px-4 py-3.5">
+      {isOpen && <Label htmlFor="answer" className="mb-1.5 pl-1">Escriba su respuesta:</Label>}
       <div className="flex items-end gap-2">
         <label htmlFor="answer" className="sr-only">{question.text}</label>
         {isDate ? (

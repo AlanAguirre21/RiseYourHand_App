@@ -69,6 +69,9 @@ export const ensureForm = async () => {
 
 export const findVersion = (version) => Form.findOne({ key: FORM_KEY, version }).lean();
 
+// Every stored version, oldest first
+export const listVersions = () => Form.find({ key: FORM_KEY }).sort({ version: 1 }).lean();
+
 // Latest version: the one new responses are filled against
 export const getCurrent = async () => {
   const form = await Form.findOne({ key: FORM_KEY }).sort({ version: -1 }).lean();
