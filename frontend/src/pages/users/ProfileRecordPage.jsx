@@ -16,7 +16,7 @@ export default function ProfileRecordPage() {
       </div>
 
       <div className="mt-6 space-y-4">
-        <ResponsesList load={listMyResponses} emptyText="Todavía no has registrado ninguna manita." />
+        <ResponsesList load={listMyResponses} searchable emptyText="Todavía no has registrado ninguna manita." />
       </div>
     </PageContainer>
   );

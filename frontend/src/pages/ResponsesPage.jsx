@@ -45,7 +45,7 @@ export default function ResponsesPage() {
       <p className="mt-1 text-sm text-text-muted">Las manitas registradas por todos los usuarios, de la más reciente a la más antigua.</p>
       <PowerBiExport />
       <div className="mt-6 space-y-4">
-        <ResponsesList load={listAllResponses} showUser emptyText="Todavía no hay respuestas registradas." />
+        <ResponsesList load={listAllResponses} showUser searchable emptyText="Todavía no hay respuestas registradas." />
       </div>
     </PageContainer>
   );
