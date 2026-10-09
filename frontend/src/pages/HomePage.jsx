@@ -11,9 +11,7 @@ export default function HomePage() {
   return (
     <PageContainer size="lg">
       <header className="flex flex-col items-center text-center">
-        <span className={`neu-raised flex h-20 w-20 items-center justify-center ${TILE}`}>
           <img src={zfLogo} alt="" className="size-12 object-contain" />
-        </span>
         <hgroup className="mt-5 max-w-full">
           <p className="text-sm font-semibold leading-none tracking-wide text-zf-blue">
             ZF ESL

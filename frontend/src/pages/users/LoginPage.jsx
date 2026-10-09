@@ -38,9 +38,7 @@ export default function LoginPage() {
     <PageContainer>
       <form onSubmit={handleSubmit} className={`mt-4 p-6 sm:mt-8 sm:p-8 ${PANEL}`}>
         <header className="flex flex-col items-center border-b border-white/60 pb-6 text-center">
-          <span className={`neu-raised flex h-16 w-16 items-center justify-center ${TILE}`}>
             <img src={zfLogo} alt="" className="size-10 object-contain" />
-          </span>
           <hgroup className="mt-4 max-w-full">
             <p className="text-xs font-semibold leading-none tracking-wide text-zf-blue">
               ZF ESL

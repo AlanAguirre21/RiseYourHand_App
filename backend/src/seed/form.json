@@ -10,7 +10,7 @@
         { "key": "champion", "text": "Escribe el nombre del encargado de esta manita", "type": "open" },
         { "key": "name", "text": "Nombre de la manita", "type": "open" },
         { "key": "color", "text": "Selecciona el color de la manita", "type": "single",
-          "options": ["Amarilla", "Roja", "Verde", "NO VIABLE"] },
+          "options": ["Amarilla", "Roja", "Verde", "CIS"] },
         { "key": "status", "text": "Selecciona el estatus de la manita", "type": "single",
           "options": ["Not Started", "Started"] },
         { "key": "creation_date", "text": "Fecha de creación", "type": "date" },
