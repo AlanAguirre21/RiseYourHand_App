@@ -14,13 +14,36 @@ export const createResponse = async (req, res) => {
   res.status(201).json(response);
 };
 
-// Own responses by default; "?scope=all" lists everyone's and is only for admins
+// Admins only (see form.routes.js)
+export const updateResponse = async (req, res) => {
+  res.json(await responseService.update(req.params.id, req.body));
+};
+
+// Start or advance of a manita. Admins only (see form.routes.js)
+export const updateResponseTracking = async (req, res) => {
+  res.json(await responseService.updateTracking(req.params.id, req.body));
+};
+
+// By default the manitas of the user (registered by them, or with them as champion); "?scope=all" lists everyone's and is only for admins
 export const getResponses = async (req, res) => {
   const all = req.query.scope === 'all';
   if (all && req.user.role !== ROLES.ADMIN) {
     throw Object.assign(new Error('No tienes permiso para esta acción.'), { status: 403 });
   }
-  res.json(await responseService.list(all ? {} : { user: req.user._id }));
+  // The computed fields change with the date: never served from a cache
+  res
+    .set('Cache-Control', 'no-store')
+    .json(await (all ? responseService.list() : responseService.listOf(req.user)));
+};
+
+// Every manita, for the tracking page: any logged user can read them, only admins change them
+export const getTracking = async (req, res) => {
+  res.set('Cache-Control', 'no-store').json(await responseService.list());
+};
+
+// Every manita, without the limit of the lists: the dashboard counts all of them. Admins only
+export const getDashboard = async (req, res) => {
+  res.set('Cache-Control', 'no-store').json(await responseService.list({}, 0));
 };
 
 // Key of the export link, for the admin that shares it with Power BI

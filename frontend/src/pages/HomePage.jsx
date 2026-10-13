@@ -16,11 +16,11 @@ export default function HomePage() {
           <p className="text-sm font-semibold leading-none tracking-wide text-zf-blue">
             ZF ESL
           </p>
-          <h1 className="mt-2 text-balance break-words text-3xl font-semibold text-text sm:text-5xl">
+          <h1 className="mt-2 text-balance break-words text-3xl font-semibold text-text sm:text-5xl" >
             ¡Levanta la Mano!
           </h1>
         </hgroup>
-
+        
         <p className="mt-4 max-w-xl text-balance text-text-muted">
           Este es el formulario "manitas" para agregar una sugerencia o mostrar un punto de alerta en su área de trabajo.
         </p>

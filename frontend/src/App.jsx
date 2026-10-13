@@ -6,6 +6,8 @@ import HomePage from './pages/HomePage.jsx';
 import ChatPage from './pages/ChatPage.jsx';
 import ResultPage from './pages/ResultPage.jsx';
 import ResponsesPage from './pages/ResponsesPage.jsx';
+import DashboardPage from './pages/DashboardPage.jsx';
+import CluesPage from './pages/CluesPage.jsx';
 import LoginPage from './pages/users/LoginPage.jsx';
 import RegisterPage from './pages/users/RegisterPage.jsx';
 import ProfilePage from './pages/users/ProfilePage.jsx';
@@ -26,8 +28,10 @@ export default function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/perfil" element={<ProfilePage />} />
               <Route path="/historial" element={<ProfileRecordPage />} />
+              <Route path="/seguimiento" element={<CluesPage />} />
               <Route element={<RequireRole roles={[ROLES.ADMIN]} />}>
                 <Route path="/usuarios" element={<UsersPage />} />
+                <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/registro" element={<ResponsesPage />} />
               </Route>
               <Route path="/formulario" element={<ChatPage />} />

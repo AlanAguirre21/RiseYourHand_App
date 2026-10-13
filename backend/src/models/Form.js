@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-export const QUESTION_TYPES = ['open', 'single', 'multiple', 'date'];
+export const QUESTION_TYPES = ['open', 'single', 'multiple', 'date', 'user'];
 export const COMPUTED_OPS = ['days_since', 'days_until', 'expiration_status'];
 
 const questionSchema = new mongoose.Schema({
@@ -8,10 +8,11 @@ const questionSchema = new mongoose.Schema({
   text: { type: String, required: true },
   type: {
     type: String,
-    enum: QUESTION_TYPES,                          // free text | one option | several | YYYY-MM-DD
+    enum: QUESTION_TYPES,                          // free text | one option | several | YYYY-MM-DD | name of a user
     required: true,
   },
   options: { type: [String], default: [] },        // only for single / multiple
+  champions: { type: Boolean, default: false },    // only for user: just the users marked as champion
   required: { type: Boolean, default: true },
 }, { _id: false });
 

@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { Check, Circle, CircleCheck, SendHorizontal } from 'lucide-react';
 import Avatar from './Avatar.jsx';
 import MenuOption from '../MenuOption.jsx';
+import UserPicker from '../UserPicker.jsx';
 import { Label } from '../Input.jsx';
 
 export const ANSWER_MAX = 1000;
 
-const isChoice = question => question.type === 'single' || question.type === 'multiple';
+// Answered from the list shown in the chat, not from the bottom bar
+const isChoice = question => ['single', 'multiple', 'user'].includes(question.type);
 
 // Options of a "single" (answers on click) or "multiple" (pick several, then confirm) question
 export function OptionReplies({ question, onAnswer, disabled }) {
@@ -42,6 +44,18 @@ export function OptionReplies({ question, onAnswer, disabled }) {
             Confirmar
           </MenuOption>
         )}
+      </div>
+    </div>
+  );
+}
+
+// Users to pick for a "user" question (answers on click), with the way to register a missing one
+export function UserReplies({ question, onAnswer, disabled }) {
+  return (
+    <div className="flex items-end justify-start gap-2">
+      <Avatar size={26} />
+      <div className="glass neu-raised w-full max-w-xs rounded-2xl rounded-bl-sm border border-white/60 bg-white/65 p-1.5">
+        <UserPicker onPick={onAnswer} disabled={disabled} championsOnly={question.champions === true} />
       </div>
     </div>
   );

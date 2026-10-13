@@ -53,7 +53,10 @@ export default function RoleCard({ user, onSaved }) {
           <Icon size={20} />
         </span>
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-text">{ROLE_LABELS[user.role]}</p>
+          <p className="text-sm font-semibold text-text">
+            {ROLE_LABELS[user.role]}
+            {user.champion && <span className="ml-2 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent">Champion</span>}
+          </p>
           <p className="text-sm text-text-muted">{ROLE_DESCRIPTIONS[user.role]}</p>
         </div>
       </div>

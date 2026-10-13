@@ -31,6 +31,7 @@ export function validate(form) {
     if (['single', 'multiple'].includes(q.type) && !q.options?.length) {
       fail(`question "${q.key}" needs options`);
     }
+    if (q.champions && q.type !== 'user') fail(`question "${q.key}": "champions" is only for user questions`);
   }
   for (const c of computed) {
     if (!COMPUTED_OPS.includes(c.op)) fail(`computed "${c.key}" has unknown op "${c.op}"`);

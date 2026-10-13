@@ -36,13 +36,23 @@ export default function AppHeader() {
                 Inicio
               </NavLink>
             )}
-            
+
+            {user.role === ROLES.ADMIN && (
+              <NavLink to="/dashboard" className={linkClass}>
+                <span className="hidden sm:inline">Dashboard</span>
+                <span className="sm:hidden">Dashboard</span>
+              </NavLink>
+            )}
             {user.role === ROLES.ADMIN && (
               <NavLink to="/registro" className={linkClass}>
                 <span className="hidden sm:inline">Registro de respuestas</span>
                 <span className="sm:hidden">Registro</span>
               </NavLink>
             )}
+            <NavLink to="/seguimiento" className={linkClass}>
+              <span className="hidden sm:inline">Seguimiento</span>
+              <span className="sm:hidden">Seguimiento</span>
+            </NavLink>
             <NavLink to="/historial" className={linkClass}>
               <span className="hidden sm:inline">Mis respuestas</span>
               <span className="sm:hidden">Respuestas</span>

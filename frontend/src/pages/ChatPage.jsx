@@ -5,7 +5,7 @@ import MessageBubble from '../components/chat/ChatBubble.jsx';
 import Avatar from '../components/chat/Avatar.jsx';
 import SectionDivider from '../components/chat/SectionDivider.jsx';
 import ProgressBar from '../components/chat/ProgressBar.jsx';
-import { OptionReplies, AnswerBar, ANSWER_MAX } from '../components/chat/AnswerControls.jsx';
+import { OptionReplies, UserReplies, AnswerBar, ANSWER_MAX } from '../components/chat/AnswerControls.jsx';
 import StatusMessage from '../components/StatusMessage.jsx';
 import { useFormChat } from '../hooks/useFormChat.js';
 import { formatAnswer, isEmptyAnswer } from '../utils/answers.js';
@@ -18,6 +18,7 @@ const STATUS_TEXT = {
   date: 'Selecciona una fecha',
   single: 'Elige una opción',
   multiple: 'Elige una o varias opciones y confirma',
+  user: 'Elige un usuario o registra uno nuevo',
 };
 
 const linkButton = 'font-medium text-accent hover:underline disabled:cursor-not-allowed disabled:opacity-40';
@@ -75,6 +76,8 @@ export default function ChatPage() {
       );
     } else if (q.type === 'single' || q.type === 'multiple') {
       messages.push(<OptionReplies key={`o-${q.key}`} question={q} onAnswer={answer} disabled={sending} />);
+    } else if (q.type === 'user') {
+      messages.push(<UserReplies key={`o-${q.key}`} question={q} onAnswer={answer} disabled={sending} />);
     }
   });
 

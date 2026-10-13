@@ -7,6 +7,7 @@ import { Input, Label } from '../../components/Input.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { createUser } from '../../api/users.js';
 import { ROLES } from '../../constants/roles.js';
+import { cleanName, cleanEmail, cleanPayroll, isValidName, isValidEmail, isValidPayroll } from '../../utils/userFields.js';
 import { PANEL, TILE } from '../../constants/styles.js';
 import zfLogo from '../../assets/ZF_logo.svg';
 
@@ -16,13 +17,15 @@ export default function NewUserPage() {
   const navigate = useNavigate();
 
   const [name, setName]         = useState('');
+  const [email, setEmail]       = useState('');
+  const [payroll, setPayroll]   = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]       = useState(null);
 
   if (user && !submitting) return <Navigate to={user.role === ROLES.ADMIN ? '/usuarios' : '/'} replace />;
 
-  const cleanName = name.trim().replace(/\s+/g, ' ');
-  const isValid = cleanName.length >= 3;
+  const data = { name: cleanName(name), email: cleanEmail(email), payroll: cleanPayroll(payroll) };
+  const isValid = isValidName(data.name) && isValidEmail(data.email) && isValidPayroll(data.payroll);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -31,7 +34,7 @@ export default function NewUserPage() {
     setError(null);
 
     try {
-      const newUser = await createUser({ name: cleanName });
+      const newUser = await createUser(data);
       await login(newUser.name);
       navigate('/', { replace: true });
     } catch (err) {
@@ -56,22 +59,51 @@ export default function NewUserPage() {
           <h2 className="mt-2 text-sm font-medium text-text-muted">Crear usuario</h2>
         </header>
 
-        <div className="mt-6">
-          <Label htmlFor="name">Nombre completo</Label>
-          <Input
-            id="name"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            maxLength={100}
-            autoFocus
-            autoComplete="off"
-            placeholder="p. ej. Juan Pérez"
-            aria-describedby="name-hint"
-            className="py-2"
-          />
-          <p id="name-hint" className="mt-1 text-xs text-text-faint">
-            Con este nombre se inicia sesión. No importan mayúsculas ni acentos.
-          </p>
+        <div className="mt-6 space-y-4">
+          <div>
+            <Label htmlFor="name">Nombre completo</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              maxLength={100}
+              autoFocus
+              autoComplete="off"
+              placeholder="p. ej. Juan Pérez"
+              aria-describedby="name-hint"
+              className="py-2"
+            />
+            <p id="name-hint" className="mt-1 text-xs text-text-faint">
+              Con el nombre que ingreses se inicia sesión. No importan mayúsculas ni acentos.
+            </p>
+          </div>
+
+          <div>
+            <Label htmlFor="email">Correo electrónico</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              maxLength={100}
+              autoComplete="off"
+              placeholder="p. ej. miguel.torres@zf.com"
+              className="py-2"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="payroll">Número de nómina</Label>
+            <Input
+              id="payroll"
+              value={payroll}
+              onChange={e => setPayroll(e.target.value)}
+              maxLength={20}
+              autoComplete="off"
+              placeholder="p. ej. 123456"
+              className="py-2"
+            />
+          </div>
         </div>
 
         {error && <div className="mt-4"><StatusMessage error={error} /></div>}

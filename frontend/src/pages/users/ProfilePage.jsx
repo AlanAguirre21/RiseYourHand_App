@@ -31,7 +31,7 @@ export default function ProfilePage() {
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-semibold text-text">Mis respuestas</span>
-              <span className="block text-sm text-text-muted">Las manitas que has registrado.</span>
+              <span className="block text-sm text-text-muted">Las manitas que has registrado o tienes a cargo como champion.</span>
             </span>
             <ChevronRight size={18} className="shrink-0 text-text-muted" />
           </Link>

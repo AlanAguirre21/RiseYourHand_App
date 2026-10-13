@@ -4,7 +4,7 @@ Aplicación web para registrar «manitas» (sugerencias de mejora) mediante un f
 
 ## Qué hace
 
-- **Formulario tipo chat.** El usuario responde pregunta por pregunta: texto libre, opción única, opción múltiple o fecha.
+- **Formulario tipo chat.** El usuario responde pregunta por pregunta: texto libre, opción única, opción múltiple, fecha o un usuario registrado (que se puede dar de alta ahí mismo).
 - **Registro de respuestas.** Cada usuario ve su historial; los administradores ven las respuestas de todos.
 - **Campos calculados.** A partir de las fechas se obtienen la situación de la manita (En tiempo, Por vencer, Vence hoy, Vencida), los días transcurridos y los días para su vencimiento. Se calculan al leer, no se guardan.
 - **Exportación a Power BI.** Un enlace devuelve todas las respuestas como una tabla CSV.
@@ -100,7 +100,7 @@ Si el backend está en otra dirección, defínela en `frontend/.env` con `VITE_A
 
 ### 3. Primer acceso
 
-Entra con el nombre **Admin 01**. Desde la sección de usuarios, un administrador puede cambiar el rol de los demás. Cualquier persona puede registrarse con su nombre desde la pantalla de acceso.
+Entra con el nombre **Admin 01**. Desde la sección de usuarios, un administrador puede cambiar el rol de los demás. Cualquier persona puede registrarse desde la pantalla de acceso con su nombre, correo electrónico y número de nómina.
 
 ## Scripts
 
@@ -137,13 +137,20 @@ Todas las rutas cuelgan de `/api`. La sesión se envía como `Authorization: Bea
 | GET | `/health` | Público | Estado del servidor |
 | POST | `/auth/login` | Público | Acceso por nombre |
 | GET | `/auth/me` | Sesión | Usuario de la sesión |
-| POST | `/users` | Público | Crea un usuario |
-| PATCH | `/users/me` | Sesión | Edita el nombre o el avatar propios |
+| POST | `/users` | Público | Crea un usuario (nombre, correo y número de nómina) |
+| PATCH | `/users/me` | Sesión | Edita el nombre, el correo, el número de nómina o el avatar propios |
 | GET | `/users` | Admin | Lista de usuarios |
+| GET | `/users/names` | Sesión | Nombres de los usuarios, para elegirlos en el formulario |
+| PATCH | `/users/:id` | Admin | Edita el nombre, el correo, el número de nómina o si es champion |
+| PATCH | `/users/:id/champion` | Sesión | Marca a un usuario como champion |
 | PATCH | `/users/:id/role` | Admin | Cambia el rol de un usuario |
 | GET | `/form` | Sesión | Formulario vigente |
 | POST | `/form/responses` | Sesión | Guarda una respuesta |
-| GET | `/form/responses` | Sesión | Respuestas propias; con `?scope=all`, las de todos (admin) |
+| GET | `/form/responses` | Sesión | Manitas propias (registradas por el usuario o con él como champion); con `?scope=all`, las de todos (admin) |
+| PATCH | `/form/responses/:id` | Admin | Edita las respuestas de un registro |
+| GET | `/form/dashboard` | Admin | Todas las manitas, para el dashboard |
+| GET | `/form/tracking` | Sesión | Todas las manitas, para la página de seguimiento (solo lectura) |
+| PATCH | `/form/responses/:id/tracking` | Admin | Inicia una manita o cambia su avance |
 | GET | `/form/export-key` | Admin | Clave del enlace de exportación |
 | GET | `/form/responses.csv?key=…` | Clave | Todas las respuestas en CSV |
 
@@ -153,7 +160,7 @@ Todas las rutas cuelgan de `/api`. La sesión se envía como `Authorization: Bea
 2. Pulsa **Copiar enlace** en la sección «Exportar a Power BI».
 3. En Power BI: **Obtener datos → Web** y pega el enlace.
 
-El CSV tiene una fila por respuesta, de la más reciente a la más antigua, con estas columnas: ID, fecha de registro, usuario, versión del formulario, una columna por pregunta y una por campo calculado. Las respuestas de opción múltiple se separan con `; `.
+El CSV tiene una fila por respuesta, de la más reciente a la más antigua, con estas columnas: `user` (quién la registró), una columna por pregunta y una por campo calculado. Los encabezados son las claves (`key`) de `form.json`. Las respuestas de opción múltiple se separan con `; `.
 
 A tener en cuenta:
 
@@ -166,7 +173,7 @@ A tener en cuenta:
 El formulario se define en `backend/src/seed/form.json`: secciones, preguntas (`open`, `single`, `multiple`, `date`) y campos calculados (`days_since`, `days_until`, `expiration_status`, siempre a partir de una pregunta de fecha).
 
 - Si la versión actual **aún no tiene respuestas**, los cambios se aplican al reiniciar el servidor o al ejecutar `npm run seed`.
-- Si **ya tiene respuestas**, incrementa `"version"` para que los cambios se apliquen. Las respuestas anteriores conservan la versión con la que se contestaron.
+- Si **ya tiene respuestas**, incrementa `"version"` para que los cambios se apliquen. Las respuestas anteriores conservan la versión con la que se contestaron, hasta que un administrador las edita: al guardarlas pasan a la versión vigente y hay que contestar las preguntas nuevas.
 
 ## Seguridad
 

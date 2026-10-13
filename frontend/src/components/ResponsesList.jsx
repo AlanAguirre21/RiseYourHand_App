@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Search } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
+import { Medal, Search } from 'lucide-react';
 import StatusMessage from './StatusMessage.jsx';
+import ResponseEditor from './ResponseEditor.jsx';
 import { Input, Select } from './Input.jsx';
 import { getForm } from '../api/forms.js';
+import { useLiveData } from '../hooks/useLiveData.js';
 import { PANEL } from '../constants/styles.js';
 import { flattenQuestions, formatAnswer, formatComputed } from '../utils/answers.js';
 
@@ -15,19 +17,27 @@ const normalize = text => String(text).normalize('NFD').replace(/\p{Diacritic}/g
 
 const userName = response => response.user?.name ?? 'Usuario eliminado';
 
-export default function ResponsesList({ load, showUser = false, searchable = false, emptyText }) {
-  const [data, setData]   = useState(null);  
-  const [error, setError] = useState(null);
+// "editable" turns each card into a form on click (the backend only lets admins save).
+// "championName" puts a medal on the manitas that have that user as their champion
+export default function ResponsesList({
+  load, showUser = false, searchable = false, editable = false, championName = null, emptyText,
+}) {
   const [query, setQuery] = useState('');
   const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
+  const [editing, setEditing] = useState(() => new Set());   // ids of the responses being edited
 
-  useEffect(() => {
-    let active = true;
-    Promise.all([getForm(), load()])
-      .then(([form, responses]) => { if (active) setData({ questions: flattenQuestions(form), responses }); })
-      .catch(e => { if (active) setError(e.message); });
-    return () => { active = false; };
-  }, [load]);
+  const setEditingOf = (id, on) => setEditing(ids => {
+    const next = new Set(ids);
+    if (on) next.add(id); else next.delete(id);
+    return next;
+  });
+
+  const fetchData = useCallback(
+    () => Promise.all([getForm(), load()])
+      .then(([form, responses]) => ({ questions: flattenQuestions(form), responses })),
+    [load],
+  );
+  const { data, setData, error } = useLiveData(fetchData);
 
   const searchTexts = useMemo(() => {
     if (!data || !searchable) return null;
@@ -93,12 +103,57 @@ export default function ResponsesList({ load, showUser = false, searchable = fal
       )}
       {shown.map(response => {
         const byKey = new Map(response.answers.map(a => [a.questionKey, a.value]));
-        return (
-          <article key={response.id} className={`p-5 ${PANEL}`}>
+        const isChampion = championName != null
+          && data.questions.some(q => q.champions && byKey.get(q.key) === championName);
+        const title = (
+          <div className="flex items-start justify-between gap-3">
             <p className="text-xs font-medium text-text-muted">
               {dateFormat.format(new Date(response.createdAt))}
               {showUser && ` · ${userName(response)}`}
             </p>
+            {isChampion && (
+              <span
+                title="Eres el champion de esta manita"
+                className="-mr-1 -mt-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent"
+              >
+                <Medal size={18} aria-label="Eres el champion de esta manita" />
+              </span>
+            )}
+          </div>
+        );
+        if (editing.has(response.id)) {
+          return (
+            // Raised while its users panel is open, so the panel lies over the cards below
+            <article key={response.id} className={`relative p-5 ring-2 ring-accent/30 has-[[data-user-panel]]:z-20 ${PANEL}`}>
+              {title}
+              <ResponseEditor
+                response={response}
+                questions={data.questions}
+                onSaved={updated => {
+                  setData(d => ({ ...d, responses: d.responses.map(r => (r.id === updated.id ? updated : r)) }));
+                  setEditingOf(response.id, false);
+                }}
+                onCancel={() => setEditingOf(response.id, false)}
+              />
+            </article>
+          );
+        }
+        const editProps = editable && {
+          role: 'button',
+          tabIndex: 0,
+          title: 'Editar respuesta',
+          onClick: () => setEditingOf(response.id, true),
+          onKeyDown: e => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditingOf(response.id, true); }
+          },
+        };
+        return (
+          <article
+            key={response.id}
+            {...editProps}
+            className={`p-5 ${PANEL} ${editable ? 'cursor-pointer transition-all hover:bg-white/60 hover:ring-2 hover:ring-accent/30' : ''}`}
+          >
+            {title}
             <dl className="mt-3 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
               {data.questions.map(q => (
                 <div key={q.key} className="min-w-0">

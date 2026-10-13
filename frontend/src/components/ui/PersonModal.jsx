@@ -34,7 +34,7 @@ export default function PersonModal({ user, onClose }) {
 
           <UserAvatar user={user} size={208} className="neu-raised" />
           <h2 id="person-modal-name" className="mt-4 text-lg font-semibold text-text">{user.name}</h2>
-          {user.role && <p className="text-sm text-text-muted">{ROLE_LABELS[user.role]}</p>}
+          {user.role && <p className="text-sm text-text-muted">{ROLE_LABELS[user.role]}{user.champion ? ' · Champion' : ''}</p>}
         </div>
       )}
     </dialog>
