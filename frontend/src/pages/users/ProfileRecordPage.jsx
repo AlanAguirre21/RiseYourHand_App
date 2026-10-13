@@ -4,6 +4,7 @@ import ResponsesList from '../../components/ResponsesList.jsx';
 import Button from '../../components/Button.jsx';
 import { listMyResponses } from '../../api/forms.js';
 import { useAuth } from '../../hooks/useAuth.js';
+import { ROLES } from '../../constants/roles.js';
 
 export default function ProfileRecordPage() {
   const { user } = useAuth();
@@ -15,7 +16,7 @@ export default function ProfileRecordPage() {
           <h1 className="text-2xl font-semibold text-text">Mis respuestas</h1>
           <p className="mt-1 text-sm text-text-muted">Las manitas que has registrado y las que tienes a cargo como champion, de la más reciente a la más antigua.</p>
         </div>
-        <Button as={Link} to="/formulario" variant="primary">Registrar manita</Button>
+        {user.role === ROLES.ADMIN && <Button as={Link} to="/formulario" variant="primary">Registrar manita</Button>}
       </div>
 
       <div className="mt-6 space-y-4">

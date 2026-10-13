@@ -8,7 +8,7 @@ import { PANEL } from '../../constants/styles.js';
 
 const ROLE_DESCRIPTIONS = {
   admin: 'Puede registrar manitas, consultar el registro de todas las respuestas y gestionar los usuarios y sus roles.',
-  user:  'Puede registrar manitas y consultar sus propias respuestas.',
+  user:  'Puede consultar sus manitas (las que tiene registradas o a su cargo como champion) y el seguimiento de todas.',
 };
 
 export default function RoleCard({ user, onSaved }) {

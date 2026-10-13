@@ -4,7 +4,7 @@ Aplicación web para registrar «manitas» (sugerencias de mejora) mediante un f
 
 ## Qué hace
 
-- **Formulario tipo chat.** El usuario responde pregunta por pregunta: texto libre, opción única, opción múltiple, fecha o un usuario registrado (que se puede dar de alta ahí mismo).
+- **Formulario tipo chat.** Solo para administradores. Se responde pregunta por pregunta: texto libre, opción única, opción múltiple, fecha o un usuario registrado (que se puede dar de alta ahí mismo).
 - **Registro de respuestas.** Cada usuario ve su historial; los administradores ven las respuestas de todos.
 - **Campos calculados.** A partir de las fechas se obtienen la situación de la manita (En tiempo, Por vencer, Vence hoy, Vencida), los días transcurridos y los días para su vencimiento. Se calculan al leer, no se guardan.
 - **Exportación a Power BI.** Un enlace devuelve todas las respuestas como una tabla CSV.
@@ -121,8 +121,8 @@ Entra con el nombre **Admin 01**. Desde la sección de usuarios, un administrado
 | `/login` | Público | Acceso por nombre |
 | `/usuarios/nuevo` | Público | Registro de usuario |
 | `/` | Usuarios | Inicio |
-| `/formulario` | Usuarios | Formulario en forma de chat |
-| `/formulario/resultado` | Usuarios | Resumen de la respuesta enviada |
+| `/formulario` | Administradores | Formulario en forma de chat |
+| `/formulario/resultado` | Administradores | Resumen de la respuesta enviada |
 | `/perfil` | Usuarios | Perfil y avatar |
 | `/historial` | Usuarios | Respuestas propias |
 | `/registro` | Administradores | Respuestas de todos y exportación a Power BI |
@@ -145,7 +145,7 @@ Todas las rutas cuelgan de `/api`. La sesión se envía como `Authorization: Bea
 | PATCH | `/users/:id/champion` | Sesión | Marca a un usuario como champion |
 | PATCH | `/users/:id/role` | Admin | Cambia el rol de un usuario |
 | GET | `/form` | Sesión | Formulario vigente |
-| POST | `/form/responses` | Sesión | Guarda una respuesta |
+| POST | `/form/responses` | Admin | Guarda una respuesta |
 | GET | `/form/responses` | Sesión | Manitas propias (registradas por el usuario o con él como champion); con `?scope=all`, las de todos (admin) |
 | PATCH | `/form/responses/:id` | Admin | Edita las respuestas de un registro |
 | GET | `/form/dashboard` | Admin | Todas las manitas, para el dashboard |

@@ -1,12 +1,22 @@
 import { Link } from 'react-router';
 import PageContainer from '../components/layout/PageContainer.jsx';
 import OptionCard from '../components/OptionCard.jsx';
-import { QUESTIONNAIRE_OPTION } from '../constants/questionnaires.js';
-import { PANEL, TILE } from '../constants/styles.js';
+import { useAuth } from '../hooks/useAuth.js';
+import { HOME_OPTIONS } from '../constants/questionnaires.js';
+import { ROLES } from '../constants/roles.js';
+import { PANEL } from '../constants/styles.js';
 import zfLogo from '../assets/ZF_logo.svg';
 
+// Only admins register manitas; the other users follow the ones that already exist
+const INTRO = {
+  [ROLES.ADMIN]: 'Este es el formulario "manitas" para agregar una sugerencia o mostrar un punto de alerta en su área de trabajo.',
+  [ROLES.USER]: 'Consulta las manitas que tienes registradas o a tu cargo y sigue el avance de todas.',
+};
+
 export default function HomePage() {
-  const cardBase = `group flex w-full max-w-sm flex-col items-center p-8 text-center ${PANEL}`;
+  const { user } = useAuth();
+  const options = HOME_OPTIONS.filter(option => option.roles.includes(user.role));
+  const cardBase = `group flex w-full max-w-sm flex-col sm:min-w-0 sm:flex-1 items-center p-8 text-center ${PANEL}`;
 
   return (
     <PageContainer size="lg">
@@ -20,17 +30,16 @@ export default function HomePage() {
             ¡Levanta la Mano!
           </h1>
         </hgroup>
-        
-        <p className="mt-4 max-w-xl text-balance text-text-muted">
-          Este es el formulario "manitas" para agregar una sugerencia o mostrar un punto de alerta en su área de trabajo.
-        </p>
+
+        <p className="mt-4 max-w-xl text-balance text-text-muted">{INTRO[user.role]}</p>
       </header>
 
-      <section className="mt-10 flex flex-wrap justify-center gap-4">
-        {QUESTIONNAIRE_OPTION.map(option => (
+      {/* Stacked on a phone, side by side from there on */}
+      <section className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:items-stretch sm:justify-center">
+        {options.map(option => (
           <Link
             key={option.key}
-            to="/formulario"
+            to={option.to}
             className={`${cardBase} transition-all hover:bg-white/60 hover:ring-2 hover:ring-accent/30`}
           >
             <OptionCard option={option} status="available" />
