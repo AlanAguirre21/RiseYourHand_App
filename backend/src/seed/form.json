@@ -7,7 +7,7 @@
       "key": "general",
       "name": "General",
       "questions": [
-        { "key": "champion", "text": "Escribe el nombre del encargado de esta manita", "type": "open" },
+        { "key": "champion", "text": "Escribe el nombre del champion de la manita", "type": "open" },
         { "key": "name", "text": "Nombre de la manita", "type": "open" },
         { "key": "color", "text": "Selecciona el color de la manita", "type": "single",
           "options": ["Amarilla", "Roja", "Verde", "CIS"] },

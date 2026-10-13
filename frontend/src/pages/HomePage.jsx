@@ -17,7 +17,7 @@ export default function HomePage() {
             ZF ESL
           </p>
           <h1 className="mt-2 text-balance break-words text-3xl font-semibold text-text sm:text-5xl">
-            Captura de datos "Manitas"
+            ¡Levanta la Mano!
           </h1>
         </hgroup>
 
