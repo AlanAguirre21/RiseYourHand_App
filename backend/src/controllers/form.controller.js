@@ -24,7 +24,7 @@ export const updateResponseTracking = async (req, res) => {
   res.json(await responseService.updateTracking(req.params.id, req.body));
 };
 
-// By default the manitas of the user (registered by them, or with them as champion); "?scope=all" lists everyone's and is only for admins
+// By default the manitas of the user (with them as champion or as the person who reported it); "?scope=all" lists everyone's and is only for admins
 export const getResponses = async (req, res) => {
   const all = req.query.scope === 'all';
   if (all && req.user.role !== ROLES.ADMIN) {

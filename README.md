@@ -146,7 +146,7 @@ Todas las rutas cuelgan de `/api`. La sesión se envía como `Authorization: Bea
 | PATCH | `/users/:id/role` | Admin | Cambia el rol de un usuario |
 | GET | `/form` | Sesión | Formulario vigente |
 | POST | `/form/responses` | Admin | Guarda una respuesta |
-| GET | `/form/responses` | Sesión | Manitas propias (registradas por el usuario o con él como champion); con `?scope=all`, las de todos (admin) |
+| GET | `/form/responses` | Sesión | Manitas propias (con el usuario como champion o como quien la reportó); con `?scope=all`, las de todos (admin) |
 | PATCH | `/form/responses/:id` | Admin | Edita las respuestas de un registro |
 | GET | `/form/dashboard` | Admin | Todas las manitas, para el dashboard |
 | GET | `/form/tracking` | Sesión | Todas las manitas, para la página de seguimiento (solo lectura) |

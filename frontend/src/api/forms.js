@@ -5,7 +5,7 @@ export const getForm = () => request('/form');
 export const submitResponse = (formVersion, answers) =>
   request('/form/responses', { method: 'POST', body: { formVersion, answers } });
 
-// The manitas the user registered, plus the ones where they are the champion
+// The manitas where the user is the champion or the person who reported it
 export const listMyResponses = () => request('/form/responses');
 
 // Admins only

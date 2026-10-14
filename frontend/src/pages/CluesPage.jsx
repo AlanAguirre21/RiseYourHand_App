@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Play } from 'lucide-react';
+import { Play, Search } from 'lucide-react';
 import PageContainer from '../components/layout/PageContainer.jsx';
 import StatusMessage from '../components/StatusMessage.jsx';
 import Button from '../components/Button.jsx';
-import { Select } from '../components/Input.jsx';
+import { Input, Select } from '../components/Input.jsx';
 import { useAuth } from '../hooks/useAuth.js';
 import { useLiveData } from '../hooks/useLiveData.js';
 import { listTracking, updateResponseTracking } from '../api/forms.js';
@@ -18,6 +18,19 @@ const days = n => `${n} ${n === 1 ? 'día' : 'días'}`;
 const PROGRESS_STEP = 5;
 const KNOB_PX = 20;   // the "size-5" circle at the end of the progress bar
 const ALL = 'all';
+
+const normalize = text => String(text).normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+
+// The text the search looks into: what the card shows as its title and subtitle
+function searchText(response) {
+  const answers = new Map(response.answers.map(a => [a.questionKey, a.value]));
+  return normalize([
+    answers.get(TRACKING_KEYS.name),
+    answers.get(TRACKING_KEYS.champion),
+    answers.get(TRACKING_KEYS.area),
+    response.user?.name,
+  ].filter(Boolean).join('\n'));
+}
 
 // Where today falls between the creation and the expiration dates
 function timeText({ state, totalDays, elapsedDays, completedAt }) {
@@ -175,19 +188,38 @@ export default function CluesPage() {
   const isAdmin = user.role === ROLES.ADMIN;
   const { data: responses, setData, error } = useLiveData(listTracking);
   const [filter, setFilter] = useState(ALL);
+  const [query, setQuery] = useState('');
 
+  const words = normalize(query).split(/\s+/).filter(Boolean);
   const shown = responses
     ?.filter(r => filter === ALL || r.tracking.state === filter)
+    .filter(r => {
+      if (words.length === 0) return true;
+      const text = searchText(r);
+      return words.every(word => text.includes(word));
+    })
     .sort(byUrgency);
 
   return (
     <PageContainer size="lg">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-text">Seguimiento</h1>
-          <p className="mt-1 text-sm text-text-muted">
-            El avance de todas las manitas registradas, entre su fecha de creación y su vencimiento.
-          </p>
+      <div>
+        <h1 className="text-2xl font-semibold text-text">Seguimiento</h1>
+        <p className="mt-1 text-sm text-text-muted">
+          El avance de todas las manitas registradas, entre su fecha de creación y su vencimiento.
+        </p>
+      </div>
+
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <div className="relative min-w-[200px] flex-1">
+          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-faint" />
+          <Input
+            type="search"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Buscar manita, champion, área o usuario…"
+            aria-label="Buscar manitas"
+            className="pl-9"
+          />
         </div>
         <label className="flex items-center gap-2 text-xs font-medium text-text-muted">
           Mostrar
@@ -203,7 +235,11 @@ export default function CluesPage() {
         {!error && !responses && <StatusMessage loading />}
         {shown?.length === 0 && (
           <p className={`py-12 text-center text-sm text-text-muted ${PANEL}`}>
-            {responses.length === 0 ? 'Todavía no hay manitas registradas.' : 'Ninguna manita está en ese estado.'}
+            {responses.length === 0
+              ? 'Todavía no hay manitas registradas.'
+              : words.length > 0
+                ? 'Ninguna manita coincide con la búsqueda.'
+                : 'Ninguna manita está en ese estado.'}
           </p>
         )}
         {shown?.map(response => (

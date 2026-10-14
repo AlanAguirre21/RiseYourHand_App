@@ -159,19 +159,16 @@ export const list = async (filter = {}, limit = LIST_LIMIT) => {
   return responses.map((r) => toPublicResponse(r, forms.get(r.formVersion), r.user));
 };
 
-// The manitas of a user: the ones they registered and the ones where they are the champion (the
-// answer of a question for champions is their name)
+// The manitas of a user: the ones where they are the champion or the person who reported it (the
+// answer of a question of type "user" is their name). Having registered it is not enough
 export const listOf = async (user) => {
-  const championKeys = [...new Set((await listVersions())
+  const userKeys = [...new Set((await listVersions())
     .flatMap((f) => f.sections)
     .flatMap((s) => s.questions)
-    .filter((q) => q.champions)
+    .filter((q) => q.type === 'user')
     .map((q) => q.key))];
   return list({
-    $or: [
-      { user: user._id },
-      { answers: { $elemMatch: { questionKey: { $in: championKeys }, value: user.name } } },
-    ],
+    answers: { $elemMatch: { questionKey: { $in: userKeys }, value: user.name } },
   });
 };
 
