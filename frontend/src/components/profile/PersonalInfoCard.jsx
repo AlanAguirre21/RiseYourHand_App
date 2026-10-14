@@ -4,14 +4,13 @@ import StatusMessage from '../StatusMessage.jsx';
 import { Input, Label } from '../Input.jsx';
 import { updateMe } from '../../api/users.js';
 import { PANEL } from '../../constants/styles.js';
-import { cleanName, cleanEmail, cleanPayroll, isValidName, isValidEmail, isValidPayroll } from '../../utils/userFields.js';
+import { CONTACT_HINT, cleanName, cleanEmail, cleanPayroll, isValidName, isValidContact } from '../../utils/userFields.js';
 
 const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'long' });
 
 // Users created before these fields existed have no email nor payroll number yet
 const valuesOf = user => ({ name: user.name, email: user.email ?? '', payroll: user.payroll ?? '' });
 
-const VALIDATORS = { name: isValidName, email: isValidEmail, payroll: isValidPayroll };
 
 export default function PersonalInfoCard({ user, onSaved }) {
   const [values, setValues] = useState(() => valuesOf(user));
@@ -24,7 +23,8 @@ export default function PersonalInfoCard({ user, onSaved }) {
   // Only the fields that changed are sent, and only those have to be valid
   const changes = Object.fromEntries(Object.entries(clean).filter(([key, value]) => value !== current[key]));
   const changed = Object.keys(changes).length > 0;
-  const isValid = Object.entries(changes).every(([key, value]) => VALIDATORS[key](value));
+  const isValid = (!('name' in changes) || isValidName(clean.name))
+    && (!('email' in changes || 'payroll' in changes) || isValidContact(clean));
 
   const setField = key => e => { setValues(v => ({ ...v, [key]: e.target.value })); setSaved(false); };
 
@@ -91,6 +91,7 @@ export default function PersonalInfoCard({ user, onSaved }) {
               placeholder="p. ej. 123456"
             />
           </div>
+          <p className="-mt-2 text-xs text-text-faint sm:col-span-2">{CONTACT_HINT}</p>
         </div>
 
         {user.createdAt && (

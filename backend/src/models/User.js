@@ -10,7 +10,7 @@ export const AVATAR_PATTERN = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]
 const UserSchema = new Schema({
     name:   { type: String, required: true, trim: true, minlength: 3, maxlength: 100 },
     // Optional in the schema because older users (and the default admin) were created without them;
-    // user.service.js requires both for new users
+    // user.service.js requires at least one of the two for new users
     email:   { type: String, trim: true, lowercase: true, maxlength: 100 },
     payroll: { type: String, trim: true, uppercase: true, maxlength: 20 },
     champion: { type: Boolean, default: false },   // can be in charge of manitas

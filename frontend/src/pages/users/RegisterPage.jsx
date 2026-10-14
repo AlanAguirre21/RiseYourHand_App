@@ -7,7 +7,7 @@ import { Input, Label } from '../../components/Input.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { createUser } from '../../api/users.js';
 import { ROLES } from '../../constants/roles.js';
-import { cleanName, cleanEmail, cleanPayroll, isValidName, isValidEmail, isValidPayroll } from '../../utils/userFields.js';
+import { CONTACT_HINT, cleanName, cleanEmail, cleanPayroll, isValidName, isValidContact } from '../../utils/userFields.js';
 import { PANEL, TILE } from '../../constants/styles.js';
 import zfLogo from '../../assets/ZF_logo.svg';
 
@@ -25,7 +25,7 @@ export default function NewUserPage() {
   if (user && !submitting) return <Navigate to={user.role === ROLES.ADMIN ? '/usuarios' : '/'} replace />;
 
   const data = { name: cleanName(name), email: cleanEmail(email), payroll: cleanPayroll(payroll) };
-  const isValid = isValidName(data.name) && isValidEmail(data.email) && isValidPayroll(data.payroll);
+  const isValid = isValidName(data.name) && isValidContact(data);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -103,6 +103,7 @@ export default function NewUserPage() {
               placeholder="p. ej. 123456"
               className="py-2"
             />
+            <p className="mt-1 text-xs text-text-faint">{CONTACT_HINT}</p>
           </div>
         </div>
 

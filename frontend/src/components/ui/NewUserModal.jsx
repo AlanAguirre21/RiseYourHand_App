@@ -4,7 +4,7 @@ import Button from '../Button.jsx';
 import StatusMessage from '../StatusMessage.jsx';
 import { Input, Label } from '../Input.jsx';
 import { createUser } from '../../api/users.js';
-import { cleanName, cleanEmail, cleanPayroll, isValidName, isValidEmail, isValidPayroll } from '../../utils/userFields.js';
+import { CONTACT_HINT, cleanName, cleanEmail, cleanPayroll, isValidName, isValidContact } from '../../utils/userFields.js';
 
 // Registers a user with the same data as the register page, without leaving the current one.
 // Mount it only while it is open (it starts from "initialName"). It is rendered in <body> so it
@@ -24,7 +24,7 @@ export default function NewUserModal({ initialName = '', champion = false, onCre
   }, []);
 
   const data = { name: cleanName(name), email: cleanEmail(email), payroll: cleanPayroll(payroll) };
-  const isValid = isValidName(data.name) && isValidEmail(data.email) && isValidPayroll(data.payroll);
+  const isValid = isValidName(data.name) && isValidContact(data);
 
   function close() {
     if (!busy) onClose();
@@ -92,6 +92,7 @@ export default function NewUserModal({ initialName = '', champion = false, onCre
               autoComplete="off"
               placeholder="p. ej. 123456"
             />
+            <p className="mt-1 text-xs text-text-faint">{CONTACT_HINT}</p>
           </div>
         </div>
 

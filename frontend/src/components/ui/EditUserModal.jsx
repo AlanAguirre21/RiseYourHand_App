@@ -5,14 +5,13 @@ import UserAvatar from '../profile/UserAvatar.jsx';
 import { Input, Label } from '../Input.jsx';
 import { updateUser } from '../../api/users.js';
 import { ROLE_LABELS } from '../../constants/roles.js';
-import { cleanName, cleanEmail, cleanPayroll, isValidName, isValidEmail, isValidPayroll } from '../../utils/userFields.js';
+import { CONTACT_HINT, cleanName, cleanEmail, cleanPayroll, isValidName, isValidContact } from '../../utils/userFields.js';
 
 // Users created before these fields existed have no email nor payroll number yet
 const valuesOf = user => ({
   name: user.name, email: user.email ?? '', payroll: user.payroll ?? '', champion: user.champion ?? false,
 });
 
-const VALIDATORS = { name: isValidName, email: isValidEmail, payroll: isValidPayroll, champion: () => true };
 
 // An admin edits the data of any user. Mount it only while it is open
 export default function EditUserModal({ user, onSaved, onClose }) {
@@ -34,7 +33,8 @@ export default function EditUserModal({ user, onSaved, onClose }) {
   // Only the fields that changed are sent, and only those have to be valid
   const changes = Object.fromEntries(Object.entries(clean).filter(([key, value]) => value !== current[key]));
   const changed = Object.keys(changes).length > 0;
-  const isValid = Object.entries(changes).every(([key, value]) => VALIDATORS[key](value));
+  const isValid = (!('name' in changes) || isValidName(clean.name))
+    && (!('email' in changes || 'payroll' in changes) || isValidContact(clean));
 
   const setField = key => e => setValues(v => ({ ...v, [key]: e.target.value }));
 
@@ -111,6 +111,7 @@ export default function EditUserModal({ user, onSaved, onClose }) {
               autoComplete="off"
               placeholder="p. ej. 123456"
             />
+            <p className="mt-1 text-xs text-text-faint">{CONTACT_HINT}</p>
           </div>
           <label className="flex items-center gap-2 text-sm text-text">
             <input

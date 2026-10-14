@@ -31,6 +31,16 @@ const validPayroll = (raw) => {
   return payroll;
 };
 
+// Email and payroll number are optional one by one: empty means "none" (undefined, so it is not stored)
+const isEmpty = (raw) => raw == null || (typeof raw === 'string' && raw.trim() === '');
+const optionalEmail = (raw) => (isEmpty(raw) ? undefined : validEmail(raw));
+const optionalPayroll = (raw) => (isEmpty(raw) ? undefined : validPayroll(raw));
+
+// A user needs at least one of the two besides the name
+const assertContact = (email, payroll) => {
+  if (!email && !payroll) throw httpError(400, 'Escribe el correo electrónico o el número de nómina (al menos uno).');
+};
+
 const validChampion = (raw) => {
   if (typeof raw !== 'boolean') throw httpError(400, 'El campo champion debe ser verdadero o falso.');
   return raw;
@@ -88,13 +98,14 @@ export const login = async (name) => {
 
 export const create = async ({ name, email, payroll, champion = false, role = ROLES.USER }) => {
   const clean = validName(name);
-  const cleanEmail = validEmail(email);
-  const cleanPayroll = validPayroll(payroll);
+  const cleanEmail = optionalEmail(email);
+  const cleanPayroll = optionalPayroll(payroll);
+  assertContact(cleanEmail, cleanPayroll);
   const isChampion = validChampion(champion);
   if (!Object.values(ROLES).includes(role)) throw httpError(400, 'Rol no válido.');
   await assertNameFree(clean);
-  await assertEmailFree(cleanEmail);
-  await assertPayrollFree(cleanPayroll);
+  if (cleanEmail) await assertEmailFree(cleanEmail);
+  if (cleanPayroll) await assertPayrollFree(cleanPayroll);
   return User.create({ name: clean, email: cleanEmail, payroll: cleanPayroll, champion: isChampion, role });
 };
 
@@ -104,16 +115,18 @@ export const updateProfile = async (user, { name, email, payroll, avatar }) => {
     await assertNameFree(clean, user._id);
     user.name = clean;
   }
+  // An empty email or payroll number removes it, as long as the other one stays
   if (email !== undefined) {
-    const clean = validEmail(email);
-    await assertEmailFree(clean, user._id);
+    const clean = optionalEmail(email);
+    if (clean) await assertEmailFree(clean, user._id);
     user.email = clean;
   }
   if (payroll !== undefined) {
-    const clean = validPayroll(payroll);
-    await assertPayrollFree(clean, user._id);
+    const clean = optionalPayroll(payroll);
+    if (clean) await assertPayrollFree(clean, user._id);
     user.payroll = clean;
   }
+  if (email !== undefined || payroll !== undefined) assertContact(user.email, user.payroll);
   if (avatar !== undefined) user.avatar = avatar;
   return user.save();
 };

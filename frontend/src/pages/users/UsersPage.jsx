@@ -11,7 +11,7 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { createUser, listUsers, updateUser as saveUser, updateUserRole } from '../../api/users.js';
 import { ROLES, ROLE_LABELS } from '../../constants/roles.js';
 import { PANEL } from '../../constants/styles.js';
-import { cleanName, cleanEmail, cleanPayroll, isValidName, isValidEmail, isValidPayroll } from '../../utils/userFields.js';
+import { CONTACT_HINT, cleanName, cleanEmail, cleanPayroll, isValidName, isValidContact } from '../../utils/userFields.js';
 
 const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'medium' });
 const byName = (a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' });
@@ -27,7 +27,7 @@ function NewUserForm({ onCreated }) {
   const [created, setCreated] = useState(null);
 
   const data = { name: cleanName(name), email: cleanEmail(email), payroll: cleanPayroll(payroll) };
-  const isValid = isValidName(data.name) && isValidEmail(data.email) && isValidPayroll(data.payroll);
+  const isValid = isValidName(data.name) && isValidContact(data);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -105,7 +105,7 @@ function NewUserForm({ onCreated }) {
           <UserPlus size={16} /> {busy ? 'Agregando…' : 'Agregar'}
         </Button>
       </form>
-      <p className="mt-2 text-xs text-text-faint">El usuario inicia sesión con este nombre. No importan mayúsculas ni acentos.</p>
+      <p className="mt-2 text-xs text-text-faint">El usuario inicia sesión con este nombre. No importan mayúsculas ni acentos. {CONTACT_HINT}</p>
 
       {error && <div className="mt-3"><StatusMessage error={error} /></div>}
       {created && (
