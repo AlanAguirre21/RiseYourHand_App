@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import { fileURLToPath } from 'node:url';
 import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
 import formRoutes from './routes/form.routes.js';
@@ -17,7 +18,20 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/form', formRoutes);
 
-// 404 for unmatched routes
+// 404 for unmatched API routes
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: 'Route not found' });
+});
+
+// In production the frontend build (npm run build --prefix frontend) is served from here too,
+// and any other GET returns index.html so the React routes work on reload
+if (process.env.NODE_ENV === 'production') {
+  const frontendDist = fileURLToPath(new URL('../../frontend/dist', import.meta.url));
+  app.use(express.static(frontendDist));
+  app.get('/{*path}', (req, res) => res.sendFile('index.html', { root: frontendDist }));
+}
+
+// 404 for anything else
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });

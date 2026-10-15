@@ -4,7 +4,7 @@ import connectDB from './config/db.js';
 import { ensureForm, FORM_STATUS_MESSAGES } from './services/form.service.js';
 import { ensureAdmin } from './services/user.service.js';
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 
 await connectDB();
 const formStatus = await ensureForm();
