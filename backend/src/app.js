@@ -9,7 +9,7 @@ import errorHandler from './middlewares/errorHandler.js';
 const app = express();
 
 // Global middlewares
-app.use(cors({ origin: process.env.FRONTEND_ORIGIN }));
+app.use(cors({ origin: process.env.CLIENT_ORIGIN }));
 app.use(express.json());
 
 // Routes

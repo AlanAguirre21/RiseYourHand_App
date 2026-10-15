@@ -39,6 +39,7 @@ LevantaMano_Project/
 │       ├── services/       Lógica de negocio
 │       └── utils/          Campos calculados y CSV
 ├── frontend/
+│   ├── public/             Archivos que se copian tal cual a dist (icono de la pestaña)
 │   └── src/
 │       ├── api/            Llamadas al backend
 │       ├── auth/           Sesión y protección de rutas
@@ -48,6 +49,7 @@ LevantaMano_Project/
 │       ├── pages/          Páginas de la aplicación
 │       └── utils/          Formato de respuestas
 ├── DESIGN_SYSTEM.md        Guía visual
+├── ecosystem.config.js     Configuración de pm2 para producción
 └── requirements.txt        Requisitos y dependencias
 ```
 
@@ -102,6 +104,39 @@ Si el backend está en otra dirección, defínela en `frontend/.env` con `VITE_A
 
 Entra con el nombre **Admin 01**. Desde la sección de usuarios, un administrador puede cambiar el rol de los demás. Cualquier persona puede registrarse desde la pantalla de acceso con su nombre, correo electrónico y número de nómina.
 
+## Despliegue en producción (pm2)
+
+En producción la aplicación corre como **un solo proceso** de pm2, `manitas-data-capture`: el backend sirve la API y también la compilación del frontend (`frontend/dist`). Los usuarios la abren en `http://<servidor>:<PORT>`, con el `PORT` de `backend/.env`; es el único puerto que hay que abrir.
+
+### Primer despliegue
+
+Desde la raíz del proyecto:
+
+```bash
+# 1. Crea backend/.env a partir de backend/.env.example
+npm ci --prefix backend --omit=dev
+npm ci --prefix frontend
+npm run build --prefix frontend
+pm2 start ecosystem.config.js
+pm2 save          # y "pm2 startup" una vez, para que vuelva a arrancar tras un reinicio del equipo
+```
+
+### Actualización
+
+```bash
+git pull
+npm ci --prefix backend --omit=dev    # solo si cambiaron las dependencias del backend
+npm ci --prefix frontend              # solo si cambiaron las dependencias del frontend
+npm run build --prefix frontend
+pm2 restart manitas-data-capture
+```
+
+- Un cambio solo del frontend queda publicado al terminar `npm run build`; el reinicio solo hace falta si cambió el backend o `backend/.env`.
+- Si cambias `ecosystem.config.js`, usa `pm2 reload ecosystem.config.js --update-env` en lugar de `restart`.
+- No edites nada dentro de `frontend/dist`: se regenera en cada compilación. Los archivos que deban servirse tal cual, como el icono de la pestaña, van en `frontend/public`.
+
+Para comprobar que está en marcha: `pm2 list` y `pm2 logs manitas-data-capture`.
+
 ## Scripts
 
 | Carpeta | Comando | Descripción |
@@ -111,7 +146,7 @@ Entra con el nombre **Admin 01**. Desde la sección de usuarios, un administrado
 | `backend` | `npm run seed` | Sincroniza el formulario, los índices de usuarios y el admin por defecto |
 | `frontend` | `npm run dev` | Servidor de desarrollo de Vite |
 | `frontend` | `npm run build` | Compilación de producción en `frontend/dist` |
-| `frontend` | `npm run preview` | Sirve la compilación de producción |
+| `frontend` | `npm run preview` | Sirve la compilación de producción para revisarla en local (en producción la sirve el backend) |
 | `frontend` | `npm run lint` | Revisión con oxlint |
 
 ## Páginas
