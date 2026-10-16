@@ -7,12 +7,17 @@ import { Input, Select } from '../components/Input.jsx';
 import { useAuth } from '../hooks/useAuth.js';
 import { useLiveData } from '../hooks/useLiveData.js';
 import { listTracking, updateResponseTracking } from '../api/forms.js';
-import { ROLES } from '../constants/roles.js';
 import { PANEL } from '../constants/styles.js';
 import { TRACKING_KEYS, TRACKING_STATES, isDone } from '../constants/tracking.js';
+import { computedValue, sameName } from '../utils/answers.js';
+import { ROLES } from '../constants/roles.js';
 
-const dayFormat = new Intl.DateTimeFormat('es', { dateStyle: 'medium' });
-const formatDay = value => (value ? dayFormat.format(new Date(`${value}T00:00:00`)) : 'Sin fecha');
+const answerOf = (response, key) => response.answers.find(a => a.questionKey === key)?.value;
+import { formatDate, formatDay } from '../utils/dates.js';
+import EvidenceModal from '../components/tracking/EvidenceModal.jsx';
+import EvidenceList from '../components/tracking/EvidenceList.jsx';
+
+const showDay = value => formatDay(value) || 'Sin fecha';
 const days = n => `${n} ${n === 1 ? 'día' : 'días'}`;
 
 const PROGRESS_STEP = 5;
@@ -21,20 +26,22 @@ const ALL = 'all';
 
 const normalize = text => String(text).normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
 
+// Subtitle of a card: who reported the manita, its champion and its area
+const subtitleParts = answers => [
+  answers.get(TRACKING_KEYS.reporter),
+  answers.get(TRACKING_KEYS.champion),
+  answers.get(TRACKING_KEYS.area),
+].filter(Boolean);
+
 // The text the search looks into: what the card shows as its title and subtitle
 function searchText(response) {
   const answers = new Map(response.answers.map(a => [a.questionKey, a.value]));
-  return normalize([
-    answers.get(TRACKING_KEYS.name),
-    answers.get(TRACKING_KEYS.champion),
-    answers.get(TRACKING_KEYS.area),
-    response.user?.name,
-  ].filter(Boolean).join('\n'));
+  return normalize([computedValue(response, TRACKING_KEYS.name), ...subtitleParts(answers)].filter(Boolean).join('\n'));
 }
 
 // Where today falls between the creation and the expiration dates
 function timeText({ state, totalDays, elapsedDays, completedAt }) {
-  if (isDone(state)) return `Terminada el ${dayFormat.format(new Date(completedAt))}`;
+  if (isDone(state)) return `Terminada el ${formatDate(completedAt)}`;
   if (totalDays == null || elapsedDays == null) return 'Sin fechas';
   if (elapsedDays < 0) return `Empieza en ${days(-elapsedDays)}`;
   if (elapsedDays > totalDays) return `Venció hace ${days(elapsedDays - totalDays)}`;
@@ -56,11 +63,16 @@ function byUrgency(a, b) {
   return left(a) - left(b);
 }
 
-function ManitaCard({ response, canEdit, showUser, onSaved }) {
+// "evidenceOptional": admins may save a new progress without evidence
+function ManitaCard({ response, canEdit, evidenceOptional, onSaved }) {
   const { tracking } = response;
   const [draft, setDraft] = useState(null);   // progress while the bar is being dragged
   const [busy, setBusy]   = useState(false);
   const [error, setError] = useState(null);
+  const [pending, setPending] = useState(null);   // new progress waiting for its evidence
+  const [evidenceError, setEvidenceError] = useState(null);
+  const [showEvidence, setShowEvidence] = useState(false);
+  const [evidenceVersion, setEvidenceVersion] = useState(0);   // reloads the list after a new one
 
   const answers = new Map(response.answers.map(a => [a.questionKey, a.value]));
   const state = TRACKING_STATES[tracking.state];
@@ -70,11 +82,7 @@ function ManitaCard({ response, canEdit, showUser, onSaved }) {
   // Centre of the white circle: it stays inside the bar at 0% and at 100%
   const knobLeft = `calc(${progress}% + ${(0.5 - progress / 100) * KNOB_PX}px)`;
   const today = timePercent(tracking);
-  const subtitle = [
-    answers.get(TRACKING_KEYS.champion),
-    answers.get(TRACKING_KEYS.area),
-    showUser && (response.user?.name ?? 'Usuario eliminado'),
-  ].filter(Boolean).join(' · ');
+  const subtitle = subtitleParts(answers).join(' · ');
 
   async function save(data) {
     setBusy(true);
@@ -89,18 +97,43 @@ function ManitaCard({ response, canEdit, showUser, onSaved }) {
     }
   }
 
-  // Runs when the drag ends, and again when the bar loses the focus
+  // Runs when the drag ends, and again when the bar loses the focus. A new progress is saved only
+  // with its evidence: the window asks for it, and cancelling puts the bar back
   function commit() {
-    if (busy) return;
-    if (draft !== null && draft !== tracking.progress) save({ progress: draft });
-    else setDraft(null);
+    if (busy || pending !== null) return;
+    if (draft !== null && draft !== tracking.progress) {
+      setEvidenceError(null);
+      setPending(draft);
+    } else {
+      setDraft(null);
+    }
+  }
+
+  async function saveProgress(evidence) {
+    setBusy(true);
+    setEvidenceError(null);
+    try {
+      onSaved(await updateResponseTracking(response.id, evidence ? { progress: pending, evidence } : { progress: pending }));
+      setPending(null);
+      setDraft(null);
+      setEvidenceVersion(v => v + 1);
+    } catch (err) {
+      setEvidenceError(err.message);   // shown in the window, which stays open
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function cancelProgress() {
+    setPending(null);
+    setDraft(null);
   }
 
   return (
     <article className={`p-5 ${PANEL}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="break-words font-semibold text-text">{answers.get(TRACKING_KEYS.name) ?? 'Manita sin nombre'}</h2>
+          <h2 className="break-words font-semibold text-text">{computedValue(response, TRACKING_KEYS.name) ?? 'Manita sin nombre'}</h2>
           {subtitle && <p className="mt-0.5 text-xs text-text-muted">{subtitle}</p>}
         </div>
         <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${state.badge}`}>{state.label}</span>
@@ -125,8 +158,8 @@ function ManitaCard({ response, canEdit, showUser, onSaved }) {
           )}
         </div>
         <div className="mt-1.5 flex justify-between gap-3 text-xs text-text-faint">
-          <span>{formatDay(answers.get(TRACKING_KEYS.start))}</span>
-          <span>{formatDay(answers.get(TRACKING_KEYS.end))}</span>
+          <span>{showDay(answers.get(TRACKING_KEYS.start))}</span>
+          <span>{showDay(answers.get(TRACKING_KEYS.end))}</span>
         </div>
       </div>
 
@@ -157,7 +190,7 @@ function ManitaCard({ response, canEdit, showUser, onSaved }) {
               onKeyUp={commit}
               onBlur={commit}
               disabled={busy}
-              aria-label={`Avance de ${answers.get(TRACKING_KEYS.name) ?? 'la manita'}`}
+              aria-label={`Avance de ${computedValue(response, TRACKING_KEYS.name) ?? 'la manita'}`}
               className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-wait"
             />
           )}
@@ -174,18 +207,46 @@ function ManitaCard({ response, canEdit, showUser, onSaved }) {
           </div>
         )}
         {tracking.started && canEdit && !isDone(tracking.state) && (
-          <p className="mt-2 text-xs text-text-faint">Arrastra la barra para actualizar el avance.</p>
+          <p className="mt-2 text-xs text-text-faint">Arrastra la barra para actualizar el avance. Se pide una evidencia.</p>
         )}
       </div>
 
       {error && <div className="mt-3"><StatusMessage error={error} /></div>}
+
+      {tracking.started && (
+        <div className="mt-3 border-t border-white/50 pt-3">
+          <button
+            type="button"
+            onClick={() => setShowEvidence(s => !s)}
+            aria-expanded={showEvidence}
+            className="text-xs font-medium text-accent hover:underline"
+          >
+            {showEvidence ? 'Ocultar evidencias' : 'Ver evidencias'}
+          </button>
+          {showEvidence && <div className="mt-2"><EvidenceList responseId={response.id} version={evidenceVersion} /></div>}
+        </div>
+      )}
+
+      <EvidenceModal
+        open={pending !== null}
+        from={tracking.progress}
+        to={pending ?? tracking.progress}
+        busy={busy}
+        error={evidenceError}
+        optional={evidenceOptional}
+        onConfirm={saveProgress}
+        onCancel={cancelProgress}
+      />
     </article>
   );
 }
 
 export default function CluesPage() {
   const { user } = useAuth();
+  // Admins start and update any manita; a champion, the ones in their charge (the server checks it too)
   const isAdmin = user.role === ROLES.ADMIN;
+  const canEdit = response => isAdmin
+    || (user.champion === true && sameName(answerOf(response, TRACKING_KEYS.champion) ?? '', user.name));
   const { data: responses, setData, error } = useLiveData(listTracking);
   const [filter, setFilter] = useState(ALL);
   const [query, setQuery] = useState('');
@@ -206,6 +267,9 @@ export default function CluesPage() {
         <h1 className="text-2xl font-semibold text-text">Seguimiento</h1>
         <p className="mt-1 text-sm text-text-muted">
           El avance de todas las manitas registradas, entre su fecha de creación y su vencimiento.
+          {!isAdmin && (user.champion
+            ? ' Puedes iniciar y actualizar el avance de las manitas a tu cargo.'
+            : ' Solo el champion a cargo de cada manita puede iniciarla y actualizar su avance.')}
         </p>
       </div>
 
@@ -246,8 +310,8 @@ export default function CluesPage() {
           <ManitaCard
             key={response.id}
             response={response}
-            canEdit={isAdmin}
-            showUser
+            canEdit={canEdit(response)}
+            evidenceOptional={isAdmin}
             onSaved={updated => setData(list => list.map(r => (r.id === updated.id ? updated : r)))}
           />
         ))}

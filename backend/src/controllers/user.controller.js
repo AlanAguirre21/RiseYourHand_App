@@ -41,6 +41,11 @@ export const updateUser = async (req, res) => {
   res.json(toPublicUser(user));
 };
 
+export const deleteUser = async (req, res) => {
+  await userService.remove(req.params.id, req.user);
+  res.status(204).end();
+};
+
 export const markUserChampion = async (req, res) => {
   res.json(toUserName(await userService.markChampion(req.params.id)));
 };

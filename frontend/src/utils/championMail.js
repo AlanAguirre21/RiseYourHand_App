@@ -1,4 +1,4 @@
-import { flattenQuestions, formatAnswer, isEmptyAnswer } from './answers.js';
+import { computedValue, flattenQuestions, formatAnswer, isEmptyAnswer } from './answers.js';
 
 // Very long links get cut, so the long answers are shortened in the message
 const ANSWER_MAX = 300;
@@ -10,7 +10,6 @@ const LOGO_PX = 56;
 
 // Shorter labels than the questions of the form; a question that is not here keeps its own text
 const LABELS = {
-  name: 'Nombre',
   employee: 'Reportada por',
   color: 'Color',
   status: 'Estatus',
@@ -213,7 +212,7 @@ export function downloadEml(eml, name) {
 export function championMail({ form, response, champion, sender, trackingUrl, logo }) {
   const questions = flattenQuestions(form);
   const byKey = new Map(response.answers.map(a => [a.questionKey, a.value]));
-  const manita = byKey.get('name');
+  const manita = computedValue(response, 'hand_name');
 
   const rows = questions
     .filter(q => !q.champions && !isEmptyAnswer(byKey.get(q.key)))

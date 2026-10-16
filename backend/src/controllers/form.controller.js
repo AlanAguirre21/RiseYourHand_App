@@ -19,9 +19,13 @@ export const updateResponse = async (req, res) => {
   res.json(await responseService.update(req.params.id, req.body));
 };
 
-// Start or advance of a manita. Admins only (see form.routes.js)
+// Start or advance of a manita, with its evidence. Admins, or the champion in charge of it
 export const updateResponseTracking = async (req, res) => {
-  res.json(await responseService.updateTracking(req.params.id, req.body));
+  res.json(await responseService.updateTracking(req.params.id, req.body, req.user));
+};
+
+export const getResponseEvidence = async (req, res) => {
+  res.json(await responseService.listEvidence(req.params.id));
 };
 
 // By default the manitas of the user (with them as champion or as the person who reported it); "?scope=all" lists everyone's and is only for admins

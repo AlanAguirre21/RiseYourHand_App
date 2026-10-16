@@ -3,17 +3,46 @@ import { Check, Circle, CircleCheck, SendHorizontal } from 'lucide-react';
 import Avatar from './Avatar.jsx';
 import MenuOption from '../MenuOption.jsx';
 import UserPicker from '../UserPicker.jsx';
+import FormImage from './FormImage.jsx';
+import DateInput from '../DateInput.jsx';
 import { Label } from '../Input.jsx';
+import { isValidNumber, numberRangeText } from '../../utils/answers.js';
 
 export const ANSWER_MAX = 1000;
 
 // Answered from the list shown in the chat, not from the bottom bar
 const isChoice = question => ['single', 'multiple', 'user'].includes(question.type);
 
-// Options of a "single" (answers on click) or "multiple" (pick several, then confirm) question
-export function OptionReplies({ question, onAnswer, disabled }) {
+// Options of a "single" (answers on click) or "multiple" (pick several, then confirm) question.
+// The "other" option of a single question does not answer: it calls onOther, so the answer is typed
+export function OptionReplies({ question, onAnswer, onOther, typingOther, disabled }) {
   const [picked, setPicked] = useState([]);
   const multiple = question.type === 'multiple';
+  const imageOf = option => question.optionImages?.[option];
+
+  // With pictures the options are cards: the picture with the option under it
+  if (!multiple && question.options.some(imageOf)) {
+    return (
+      <div className="flex items-end justify-start gap-2">
+        <Avatar size={26} />
+        <div className="glass neu-raised grid max-w-sm grid-cols-2 gap-1.5 rounded-2xl rounded-bl-sm border border-white/60 bg-white/65 p-1.5">
+          {question.options.map(option => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => (option === question.other ? onOther() : onAnswer(option))}
+              disabled={disabled}
+              className="flex flex-col items-center gap-1.5 rounded-xl p-2 text-sm font-medium text-accent transition-all
+                hover:bg-accent/10 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <FormImage src={imageOf(option)} alt={option} className="h-24 w-full" />
+              {option}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   function toggle(option) {
     setPicked(picked.includes(option) ? picked.filter(o => o !== option) : [...picked, option]);
@@ -26,8 +55,13 @@ export function OptionReplies({ question, onAnswer, disabled }) {
         {question.options.map(option => (
           <MenuOption
             key={option}
-            icon={multiple && picked.includes(option) ? <CircleCheck size={16} /> : <Circle size={16} />}
-            onClick={() => (multiple ? toggle(option) : onAnswer(option))}
+            icon={(multiple ? picked.includes(option) : typingOther && option === question.other)
+              ? <CircleCheck size={16} /> : <Circle size={16} />}
+            onClick={() => {
+              if (multiple) toggle(option);
+              else if (option === question.other) onOther();
+              else onAnswer(option);
+            }}
             disabled={disabled}
           >
             {option}
@@ -49,8 +83,23 @@ export function OptionReplies({ question, onAnswer, disabled }) {
   );
 }
 
-// Users to pick for a "user" question (answers on click), with the way to register a missing one
+// Users to pick for a "user" question (answers on click), with the way to register a missing one.
+// A question with "users" offers just those, as "label: name", and answers with the name
 export function UserReplies({ question, onAnswer, disabled }) {
+  if (question.users?.length) {
+    return (
+      <div className="flex items-end justify-start gap-2">
+        <Avatar size={26} />
+        <div className="glass neu-raised min-w-[180px] rounded-2xl rounded-bl-sm border border-white/60 bg-white/65 p-1.5">
+          {question.users.map(user => (
+            <MenuOption key={user.name} icon={<Circle size={16} />} onClick={() => onAnswer(user.name)} disabled={disabled}>
+              {user.label}: {user.name}
+            </MenuOption>
+          ))}
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="flex items-end justify-start gap-2">
       <Avatar size={26} />
@@ -61,16 +110,21 @@ export function UserReplies({ question, onAnswer, disabled }) {
   );
 }
 
-// Bottom bar: free text for "open", a date picker for "date", idle while options are shown.
-// Mount it with key={question.key} so the draft resets on every question
-export function AnswerBar({ question, onAnswer, disabled }) {
-  const [text, setText] = useState('');
-  const choice = isChoice(question);
+// Bottom bar: free text for "open" (and for the "other" option once picked: typingOther), a date
+// picker for "date", a number field for "number", idle while options are shown.
+// Mount it with a key that changes on every question (and on typingOther) so the draft resets
+// "initialText" starts the field already written (e.g. the payroll number of the account), with
+// "hint" saying where it came from
+export function AnswerBar({ question, onAnswer, typingOther = false, initialText = '', hint, disabled }) {
+  const [text, setText] = useState(initialText);
+  const choice = isChoice(question) && !typingOther;
   const isDate = question.type === 'date';
-  const isOpen = !choice && !isDate;
+  const isNumber = question.type === 'number';
+  const isTyped = !choice && !isDate;   // written in the bar: open, number or the "other" option
   const optional = question.required === false;
   const value = text.trim();
-  const canSend = !choice && !disabled && value !== '';
+  const outOfRange = isNumber && value !== '' && !isValidNumber(question, value);
+  const canSend = !choice && !disabled && value !== '' && !outOfRange;
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -90,19 +144,32 @@ export function AnswerBar({ question, onAnswer, disabled }) {
 
   return (
     <form onSubmit={handleSubmit} className="shrink-0 border-t border-white/40 px-4 py-3.5">
-      {isOpen && <Label htmlFor="answer" className="mb-1.5 pl-1">Escriba su respuesta:</Label>}
+      {isTyped && <Label htmlFor="answer" className="mb-1.5 pl-1">Escriba su respuesta:</Label>}
+      {hint && <p className="mb-1.5 pl-1 text-xs text-text-muted">{hint}</p>}
+      {outOfRange && (
+        <p className="mb-1.5 pl-1 text-xs text-danger">Escribe un número entero{numberRangeText(question)}.</p>
+      )}
       <div className="flex items-end gap-2">
         <label htmlFor="answer" className="sr-only">{question.text}</label>
-        {isDate ? (
+        {isNumber ? (
           <input
             id="answer"
-            type="date"
+            type="number"
+            inputMode="numeric"
+            step={1}
+            min={question.min}
+            max={question.max}
             value={text}
             onChange={e => setText(e.target.value)}
             disabled={disabled}
             autoFocus
+            placeholder={`Escribe un número${numberRangeText(question)}`}
             className={fieldClass}
           />
+        ) : isDate ? (
+          <div className="min-w-0 flex-1">
+            <DateInput id="answer" value={text} onChange={setText} disabled={disabled} autoFocus className={`${fieldClass} w-full`} />
+          </div>
         ) : (
           <textarea
             id="answer"

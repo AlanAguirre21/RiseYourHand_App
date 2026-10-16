@@ -9,9 +9,10 @@ export const TRACKING_STATES = {
 
 export const isDone = state => state === 'done' || state === 'done_late';
 
-// Questions of the form shown on each card
+// Questions of the form shown on each card; "name" is a computed field, the rest are answers
 export const TRACKING_KEYS = {
-  name: 'name',
+  name: 'hand_name',
+  reporter: 'employee',   // who raised the hand (first question of the form)
   champion: 'champion',
   area: 'area',
   start: 'creation_date',

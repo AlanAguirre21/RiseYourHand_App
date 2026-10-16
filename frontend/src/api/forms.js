@@ -21,9 +21,12 @@ export const listDashboard = () => request('/form/dashboard');
 // Every manita, for the tracking page: readable by any user
 export const listTracking = () => request('/form/tracking');
 
-// Admins only. { started: true } and/or { progress } (0 to 100)
+// Champions only. { started: true }, or { progress (0 to 100), evidence: { comment, image? } }
 export const updateResponseTracking = (id, data) =>
   request(`/form/responses/${id}/tracking`, { method: 'PATCH', body: data });
+
+// The evidences of the progress of a manita, newest first
+export const listEvidence = id => request(`/form/responses/${id}/evidence`);
 
 // Admins only. Link to every response as a CSV table, readable without a session (e.g. by Power BI)
 export const getExportLink = async () => {

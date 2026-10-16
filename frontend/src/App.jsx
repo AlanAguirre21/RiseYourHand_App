@@ -29,12 +29,12 @@ export default function App() {
               <Route path="/perfil" element={<ProfilePage />} />
               <Route path="/historial" element={<ProfileRecordPage />} />
               <Route path="/seguimiento" element={<CluesPage />} />
+              <Route path="/formulario" element={<ChatPage />} />
+              <Route path="/formulario/resultado" element={<ResultPage />} />
               <Route element={<RequireRole roles={[ROLES.ADMIN]} />}>
                 <Route path="/usuarios" element={<UsersPage />} />
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/registro" element={<ResponsesPage />} />
-                <Route path="/formulario" element={<ChatPage />} />
-                <Route path="/formulario/resultado" element={<ResultPage />} />
               </Route>
             </Route>
           </Route>

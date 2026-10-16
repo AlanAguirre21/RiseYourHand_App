@@ -2,14 +2,14 @@ import { useMemo, useState } from 'react';
 import PageContainer from '../components/layout/PageContainer.jsx';
 import StatusMessage from '../components/StatusMessage.jsx';
 import Button from '../components/Button.jsx';
-import { Input } from '../components/Input.jsx';
+import DateInput from '../components/DateInput.jsx';
 import { ChartCard, LegendKey } from '../components/charts/ChartCard.jsx';
 import DonutChart from '../components/charts/DonutChart.jsx';
 import { ColumnChart, HorizontalBarChart } from '../components/charts/BarCharts.jsx';
 import MonthlyChart from '../components/charts/MonthlyChart.jsx';
 import { useLiveData } from '../hooks/useLiveData.js';
 import { listDashboard } from '../api/forms.js';
-import { PANEL } from '../constants/styles.js';
+import { FIELD, PANEL } from '../constants/styles.js';
 import { COMPLETED_COLOR, MANITA_COLORS, SERIES_COLOR, STATUSES, TOP_CHAMPIONS } from '../constants/dashboard.js';
 import { filterByDate, formatPercent, summarize, toRows } from '../utils/dashboard.js';
 import zfLogo from '../assets/ZF_logo.svg';
@@ -71,22 +71,20 @@ export default function DashboardPage() {
         <div className="flex flex-wrap items-end gap-2 text-xs font-medium text-text-muted">
           <label className="flex flex-col gap-1">
             Desde
-            <Input
-              type="date"
-              block={false}
+            <DateInput
               value={range.from}
               max={range.to || undefined}
-              onChange={e => setRange(r => ({ ...r, from: e.target.value }))}
+              onChange={from => setRange(r => ({ ...r, from }))}
+              className={`${FIELD} w-40`}
             />
           </label>
           <label className="flex flex-col gap-1">
             Hasta
-            <Input
-              type="date"
-              block={false}
+            <DateInput
               value={range.to}
               min={range.from || undefined}
-              onChange={e => setRange(r => ({ ...r, to: e.target.value }))}
+              onChange={to => setRange(r => ({ ...r, to }))}
+              className={`${FIELD} w-40`}
             />
           </label>
           <Button onClick={() => setRange({ from: '', to: '' })} disabled={!range.from && !range.to}>Todas las fechas</Button>

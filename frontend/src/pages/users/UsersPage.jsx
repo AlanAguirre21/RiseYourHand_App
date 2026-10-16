@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { UserPlus } from 'lucide-react';
+import { Search, Trash2, UserPlus } from 'lucide-react';
 import PageContainer from '../../components/layout/PageContainer.jsx';
 import StatusMessage from '../../components/StatusMessage.jsx';
 import Button from '../../components/Button.jsx';
@@ -8,13 +8,20 @@ import EditUserModal from '../../components/ui/EditUserModal.jsx';
 import UserAvatar from '../../components/profile/UserAvatar.jsx';
 import { Input, Label, Select } from '../../components/Input.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
-import { createUser, listUsers, updateUser as saveUser, updateUserRole } from '../../api/users.js';
+import { createUser, deleteUser, listUsers, updateUser as saveUser, updateUserRole } from '../../api/users.js';
 import { ROLES, ROLE_LABELS } from '../../constants/roles.js';
 import { PANEL } from '../../constants/styles.js';
 import { CONTACT_HINT, cleanName, cleanEmail, cleanPayroll, isValidName, isValidContact } from '../../utils/userFields.js';
 
 const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'medium' });
 const byName = (a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' });
+const normalize = text => String(text).normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+
+// Whether a user matches every word searched, in their name, email, payroll number or role
+const matches = (user, words) => {
+  const text = normalize([user.name, user.email, user.payroll, ROLE_LABELS[user.role], user.champion ? 'champion' : ''].join(' '));
+  return words.every(word => text.includes(word));
+};
 
 function NewUserForm({ onCreated }) {
   const [name, setName]   = useState('');
@@ -125,6 +132,9 @@ export default function UsersPage() {
   const [busyId, setBusyId] = useState(null);   
   const [confirmRole, setConfirmRole] = useState(null);   
   const [editingUser, setEditingUser] = useState(null);
+  const [query, setQuery] = useState('');
+  const [deleting, setDeleting] = useState(null);       // user asked about in the delete window
+  const [deleteError, setDeleteError] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -163,6 +173,20 @@ export default function UsersPage() {
     }
   }
 
+  async function confirmDelete() {
+    setBusyId(deleting.id);
+    setDeleteError(null);
+    try {
+      await deleteUser(deleting.id);
+      setUsers(list => list.filter(u => u.id !== deleting.id));
+      setDeleting(null);
+    } catch (err) {
+      setDeleteError(err.message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   function handleEdited(updated) {
     setUsers(list => list.map(u => (u.id === updated.id ? updated : u)).sort(byName));
     setEditingUser(null);
@@ -181,6 +205,8 @@ export default function UsersPage() {
 
   const admins = users?.filter(u => u.role === ROLES.ADMIN).length ?? 0;
   const champions = users?.filter(u => u.champion).length ?? 0;
+  const words = normalize(query).split(/\s+/).filter(Boolean);
+  const shown = users?.filter(u => matches(u, words)) ?? [];
 
   return (
     <PageContainer size="lg">
@@ -195,8 +221,23 @@ export default function UsersPage() {
 
         {users?.length > 0 && (
           <>
+            <div className="relative">
+              <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-faint" />
+              <Input
+                type="search"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Buscar por nombre, correo, nómina o rol…"
+                aria-label="Buscar usuarios"
+                className="pl-9"
+              />
+            </div>
+
+            {shown.length === 0 ? (
+              <p className={`py-10 text-center text-sm text-text-muted ${PANEL}`}>Ningún usuario coincide con «{query.trim()}».</p>
+            ) : (
             <div className={`overflow-x-auto ${PANEL}`}>
-              <table className="w-full min-w-[840px] text-left text-sm">
+              <table className="w-full min-w-[900px] text-left text-sm">
                 <thead className="border-b border-border bg-white/60 text-xs text-text-muted">
                   <tr>
                     <th className="px-4 py-3 font-medium">Usuario</th>
@@ -205,10 +246,11 @@ export default function UsersPage() {
                     <th className="px-4 py-3 font-medium">Registrado</th>
                     <th className="px-4 py-3 text-center font-medium">Champion</th>
                     <th className="px-4 py-3 font-medium">Rol</th>
+                    <th className="px-4 py-3"><span className="sr-only">Eliminar</span></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map(u => (
+                  {shown.map(u => (
                     <tr
                       key={u.id}
                       onClick={() => setEditingUser(u)}
@@ -250,12 +292,27 @@ export default function UsersPage() {
                           {Object.values(ROLES).map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
                         </Select>
                       </td>
+                      <td className="cursor-default px-2 py-2.5 text-right" onClick={e => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          onClick={() => { setDeleteError(null); setDeleting(u); }}
+                          disabled={busyId === u.id || u.id === me.id}
+                          title={u.id === me.id ? 'No puedes eliminar tu propio usuario' : `Eliminar a ${u.name}`}
+                          aria-label={`Eliminar a ${u.name}`}
+                          className="rounded-control p-2 text-text-muted transition-all hover:bg-danger/10 hover:text-danger
+                            disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-text-muted"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+            )}
             <p className="text-sm text-text-muted">
+              {words.length > 0 && `${shown.length} de `}
               {users.length} {users.length === 1 ? 'usuario' : 'usuarios'} · {admins} {admins === 1 ? 'administrador' : 'administradores'} · {champions} {champions === 1 ? 'champion' : 'champions'}
             </p>
           </>
@@ -274,6 +331,23 @@ export default function UsersPage() {
         onCancel={() => { setConfirmRole(null); setError(null); }}
       >
         Saldrás de esta página y ya no podrás gestionar usuarios ni devolverte este rol tú mismo: otro administrador tendrá que asignártelo de nuevo.
+      </ConfirmModal>
+
+      <ConfirmModal
+        open={deleting !== null}
+        title={`¿Eliminar a ${deleting?.name ?? ''}?`}
+        confirmLabel="Eliminar"
+        busyLabel="Eliminando…"
+        busy={deleting !== null && busyId === deleting.id}
+        error={deleteError}
+        onConfirm={confirmDelete}
+        onCancel={() => { setDeleting(null); setDeleteError(null); }}
+      >
+        <p>Ya no podrá iniciar sesión ni ser elegido en el formulario. Las manitas que reportó o que tiene a su cargo se conservan.</p>
+        {deleting?.champion && (
+          <p className="mt-2 font-medium text-danger">Es champion: no se le podrán asignar nuevas manitas.</p>
+        )}
+        <p className="mt-2">Esta acción no se puede deshacer desde la aplicación.</p>
       </ConfirmModal>
     </PageContainer>
   );

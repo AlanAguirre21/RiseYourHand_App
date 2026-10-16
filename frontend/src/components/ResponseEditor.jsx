@@ -3,11 +3,12 @@ import { ChevronDown } from 'lucide-react';
 import Button from './Button.jsx';
 import StatusMessage from './StatusMessage.jsx';
 import UserPicker from './UserPicker.jsx';
+import DateInput from './DateInput.jsx';
 import { Input, Label, Select } from './Input.jsx';
 import { ANSWER_MAX } from './chat/AnswerControls.jsx';
 import { updateResponse } from '../api/forms.js';
 import { FIELD } from '../constants/styles.js';
-import { formatComputed, isEmptyAnswer } from '../utils/answers.js';
+import { formatComputed, isEmptyAnswer, isValidNumber, numberRangeText, shownQuestions } from '../utils/answers.js';
 
 const emptyValue = question => (question.type === 'multiple' ? [] : '');
 
@@ -61,14 +62,42 @@ function UserSelect({ id, value, onChange, disabled, championsOnly }) {
   );
 }
 
-function AnswerField({ id, question, value, onChange, disabled }) {
-  if (question.type === 'single') {
-    return (
-      <Select id={id} value={value} onChange={e => onChange(e.target.value)} disabled={disabled}>
-        {(!question.options.includes(value) || question.required === false) && <option value="">Sin respuesta</option>}
+// A "single" answer. With an "other" option, an answer that is not one of the options was typed:
+// it shows that option picked plus the text, which can be edited
+function SingleField({ id, question, value, onChange, disabled }) {
+  const hasOther = question.other != null;
+  const [typing, setTyping] = useState(() => hasOther && !isEmptyAnswer(value) && !question.options.includes(value));
+  const selected = typing ? question.other : value;
+
+  function pick(option) {
+    setTyping(hasOther && option === question.other);
+    onChange(option === question.other ? '' : option);
+  }
+
+  return (
+    <>
+      <Select id={id} value={selected} onChange={e => pick(e.target.value)} disabled={disabled}>
+        {(!question.options.includes(selected) || question.required === false) && <option value="">Sin respuesta</option>}
         {question.options.map(option => <option key={option} value={option}>{option}</option>)}
       </Select>
-    );
+      {typing && (
+        <Input
+          aria-label={`${question.text} (${question.other})`}
+          className="mt-1.5"
+          maxLength={ANSWER_MAX}
+          placeholder="Escribe tu respuesta"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          disabled={disabled}
+        />
+      )}
+    </>
+  );
+}
+
+function AnswerField({ id, question, value, onChange, disabled }) {
+  if (question.type === 'single') {
+    return <SingleField id={id} question={question} value={value} onChange={onChange} disabled={disabled} />;
   }
   if (question.type === 'multiple') {
     const toggle = option =>
@@ -85,11 +114,40 @@ function AnswerField({ id, question, value, onChange, disabled }) {
       </div>
     );
   }
+  if (question.type === 'user' && question.users?.length) {
+    // An answer from before the list (someone not in it) stays as it is until another is picked
+    const listed = question.users.some(u => u.name === value);
+    return (
+      <Select id={id} value={value} onChange={e => onChange(e.target.value)} disabled={disabled}>
+        {!listed && <option value={value}>{value || 'Sin respuesta'}</option>}
+        {question.users.map(u => <option key={u.name} value={u.name}>{u.label}: {u.name}</option>)}
+      </Select>
+    );
+  }
   if (question.type === 'user') {
     return <UserSelect id={id} value={value} onChange={onChange} disabled={disabled} championsOnly={question.champions === true} />;
   }
   if (question.type === 'date') {
-    return <Input id={id} type="date" value={value} onChange={e => onChange(e.target.value)} disabled={disabled} />;
+    return <DateInput id={id} value={value} onChange={onChange} disabled={disabled} />;
+  }
+  if (question.type === 'number') {
+    const invalid = !isEmptyAnswer(value) && !isValidNumber(question, value);
+    return (
+      <>
+        <Input
+          id={id}
+          type="number"
+          inputMode="numeric"
+          step={1}
+          min={question.min}
+          max={question.max}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          disabled={disabled}
+        />
+        {invalid && <p className="mt-1 text-xs text-danger">Escribe un número entero{numberRangeText(question)}.</p>}
+      </>
+    );
   }
   return (
     <textarea
@@ -106,16 +164,22 @@ function AnswerField({ id, question, value, onChange, disabled }) {
 
 // The answers of one response as a form. The computed fields are shown as they were: the server
 // recalculates them on save
-export default function ResponseEditor({ response, questions, onSaved, onCancel }) {
+// Only the questions asked for the answers being edited: changing one can show or hide others
+export default function ResponseEditor({ response, questions: allQuestions, onSaved, onCancel }) {
   const [draft, setDraft] = useState(() => {
     const byKey = new Map(response.answers.map(a => [a.questionKey, a.value]));
-    return Object.fromEntries(questions.map(q => [q.key, byKey.get(q.key) ?? emptyValue(q)]));
+    return Object.fromEntries(allQuestions.map(q => [q.key, byKey.get(q.key) ?? emptyValue(q)]));
   });
   const [busy, setBusy]   = useState(false);
   const [error, setError] = useState(null);
 
   const clean = value => (typeof value === 'string' ? value.trim() : value);
-  const isValid = questions.every(q => q.required === false || !isEmptyAnswer(clean(draft[q.key])));
+  const questions = shownQuestions(allQuestions, new Map(Object.entries(draft).map(([k, v]) => [k, clean(v)])));
+  const isValid = questions.every(q => {
+    const value = clean(draft[q.key]);
+    if (isEmptyAnswer(value)) return q.required === false;
+    return q.type !== 'number' || isValidNumber(q, value);
+  });
 
   async function handleSubmit(e) {
     e.preventDefault();

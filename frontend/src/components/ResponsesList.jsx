@@ -6,9 +6,9 @@ import { Input, Select } from './Input.jsx';
 import { getForm } from '../api/forms.js';
 import { useLiveData } from '../hooks/useLiveData.js';
 import { PANEL } from '../constants/styles.js';
-import { flattenQuestions, formatAnswer, formatComputed } from '../utils/answers.js';
+import { flattenQuestions, formatAnswer, formatComputed, shownQuestions } from '../utils/answers.js';
+import { formatDateTime } from '../utils/dates.js';
 
-const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'medium', timeStyle: 'short' });
 
 const PAGE_SIZES = [10, 25, 50, 100];
 const ALL = 'all';
@@ -44,7 +44,7 @@ export default function ResponsesList({
     return new Map(data.responses.map(response => {
       const byKey = new Map(response.answers.map(a => [a.questionKey, a.value]));
       return [response.id, normalize([
-        dateFormat.format(new Date(response.createdAt)),
+        formatDateTime(response.createdAt),
         showUser ? userName(response) : '',
         ...data.questions.map(q => formatAnswer(q, byKey.get(q.key))),
         ...response.computed.map(c => formatComputed(c.value)),
@@ -108,7 +108,7 @@ export default function ResponsesList({
         const title = (
           <div className="flex items-start justify-between gap-3">
             <p className="text-xs font-medium text-text-muted">
-              {dateFormat.format(new Date(response.createdAt))}
+              {formatDateTime(response.createdAt)}
               {showUser && ` · ${userName(response)}`}
             </p>
             {isChampion && (
@@ -155,7 +155,7 @@ export default function ResponsesList({
           >
             {title}
             <dl className="mt-3 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
-              {data.questions.map(q => (
+              {shownQuestions(data.questions, byKey).map(q => (
                 <div key={q.key} className="min-w-0">
                   <dt className="text-xs text-text-muted">{q.text}</dt>
                   <dd className="mt-0.5 whitespace-pre-line break-words font-medium text-text">

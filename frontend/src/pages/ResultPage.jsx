@@ -5,10 +5,12 @@ import PageContainer from '../components/layout/PageContainer.jsx';
 import Avatar from '../components/chat/Avatar.jsx';
 import Button from '../components/Button.jsx';
 import { PANEL } from '../constants/styles.js';
-import { flattenQuestions, formatAnswer, formatComputed } from '../utils/answers.js';
+import { flattenQuestions, formatAnswer, formatComputed, shownQuestions } from '../utils/answers.js';
 import { championMail, copyRichText, downloadEml, loadLogoPng } from '../utils/championMail.js';
 import zfLogo from '../assets/ZF_logo.svg';
 import { useAuth } from '../hooks/useAuth.js';
+
+const ACCOUNT_FIELD_LABELS = { payroll: 'número de nómina', email: 'correo electrónico' };
 
 export default function ResultPage() {
   // Filled by ChatPage after sending; missing when the page is opened directly or reloaded
@@ -30,7 +32,7 @@ export default function ResultPage() {
 
   const byKey = new Map(response.answers.map(a => [a.questionKey, a.value]));
   const details = [
-    ...flattenQuestions(form).map(q => [q.key, q.text, formatAnswer(q, byKey.get(q.key))]),
+    ...shownQuestions(flattenQuestions(form), byKey).map(q => [q.key, q.text, formatAnswer(q, byKey.get(q.key))]),
     ...response.computed.map(c => [c.key, c.text, formatComputed(c.value)]),
   ];
 
@@ -60,6 +62,12 @@ export default function ResultPage() {
         </div>
 
         <p className="mt-6 text-center text-xl font-semibold text-accent">Respuesta registrada</p>
+        {/* Data of the form saved in an account that did not have it (e.g. the payroll number) */}
+        {response.completedAccounts?.map(({ name, field }) => (
+          <p key={`${name}-${field}`} role="status" className="mt-2 text-center text-xs text-text-muted">
+            Se guardó el {ACCOUNT_FIELD_LABELS[field] ?? field} en la cuenta de {name}.
+          </p>
+        ))}
 
         <dl className="mt-8 border-t border-white/60 text-sm">
           {details.map(([key, label, value]) => (

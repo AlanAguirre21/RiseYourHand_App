@@ -20,13 +20,31 @@ const OPS = {
   expiration_status: expirationStatus,
 };
 
-// Resolves the "computed" fields of a form against the answers of one response.
-// They depend on today's date, so they are calculated on every read instead of being stored
-export function computeFields(form, answers, now = new Date()) {
+// In a "template", {folio} is the number of the response instead of an answer
+export const FOLIO_KEY = 'folio';
+const PLACEHOLDER = /\{([^{}]+)\}/g;
+
+// Keys a template uses: "{folio}_{a|b}" -> ['folio', 'a', 'b']
+export const templateKeys = template =>
+  [...template.matchAll(PLACEHOLDER)].flatMap(m => m[1].split('|').map(k => k.trim()));
+
+// Each {a|b} becomes the first of those answers that is not empty, or nothing
+function fillTemplate(template, byKey) {
+  return template.replace(PLACEHOLDER, (_, keys) => {
+    const value = keys.split('|').map(k => byKey.get(k.trim())).find(v => v != null && v !== '' && !(Array.isArray(v) && !v.length));
+    return value == null ? '' : Array.isArray(value) ? value.join(', ') : String(value);
+  });
+}
+
+// Resolves the "computed" fields of a form against the answers (and folio) of one response.
+// Some depend on today's date, so they are calculated on every read instead of being stored
+export function computeFields(form, answers, { folio = null, now = new Date() } = {}) {
   const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
   const byKey = new Map(answers.map(a => [a.questionKey, a.value]));
+  byKey.set(FOLIO_KEY, folio);
 
   return form.sections.flatMap(s => s.computed ?? []).map(c => {
+    if (c.op === 'template') return { key: c.key, text: c.text, value: fillTemplate(c.template, byKey) };
     const source = byKey.get(c.source);
     const value = source ? OPS[c.op](Date.parse(`${source}T00:00:00Z`), today) : null;
     return { key: c.key, text: c.text, value };

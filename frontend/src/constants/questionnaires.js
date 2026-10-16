@@ -1,7 +1,9 @@
 import { History, ListChecks, SquarePen } from 'lucide-react';
 import { ROLES } from './roles.js';
 
-// Cards of the home page: where each role starts from
+const ALL_ROLES = Object.values(ROLES);
+
+// Cards of the home page: where each role starts from (today every role sees all of them)
 export const HOME_OPTIONS = [
   {
     key: 'manitas',
@@ -9,7 +11,7 @@ export const HOME_OPTIONS = [
     description: 'Formulario para obtener los datos "Manitas".',
     Icon: SquarePen,
     to: '/formulario',
-    roles: [ROLES.ADMIN],
+    roles: ALL_ROLES,
   },
   {
     key: 'record',
@@ -18,7 +20,7 @@ export const HOME_OPTIONS = [
     Icon: History,
     to: '/historial',
     actionLabel: 'Ver mis manitas',
-    roles: [ROLES.USER],
+    roles: ALL_ROLES,
   },
   {
     key: 'clues',
@@ -27,6 +29,6 @@ export const HOME_OPTIONS = [
     Icon: ListChecks,
     to: '/seguimiento',
     actionLabel: 'Ver el seguimiento',
-    roles: [ROLES.USER],
+    roles: ALL_ROLES,
   },
 ];

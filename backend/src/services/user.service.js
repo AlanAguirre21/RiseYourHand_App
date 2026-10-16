@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import User, { NAME_COLLATION, cleanName } from '../models/User.js';
 import { ROLES, DEFAULT_ADMIN_NAME } from '../constants/roles.js';
+import defaultChampions from '../seed/default_champions.json' with { type: 'json' };
 
 const httpError = (status, msg) => Object.assign(new Error(msg), { status });
 
@@ -89,6 +90,33 @@ export const ensureAdmin = async () => {
   return DEFAULT_ADMIN_NAME;
 };
 
+// Creates the champions of seed/default_champions.json that no user has the name of yet (active or
+// not). Existing users are left as they are, so a champion an admin unmarked or removed stays that way.
+// Email and payroll number are optional here.
+// Returns the names created and the entries that could not be created, with the reason
+export const ensureDefaultChampions = async () => {
+  if (!Array.isArray(defaultChampions)) throw new Error('seed/default_champions.json must be a list');
+  const created = [];
+  const failed = [];
+
+  for (const entry of defaultChampions) {
+    const { name, email, payroll } = entry ?? {};
+    try {
+      if (await User.exists({ name: cleanName(name) }).collation(NAME_COLLATION)) continue;
+      const user = await create({
+        name,
+        email,
+        payroll: typeof payroll === 'number' ? String(payroll) : payroll,
+        champion: true,
+      }, { requireContact: false });
+      created.push(user.name);
+    } catch (err) {
+      failed.push({ name: String(name), reason: err.message });
+    }
+  }
+  return { created, failed };
+};
+
 export const login = async (name) => {
   await ensureAdmin();   // so the default admin can always get in, even if the admins were removed by hand
   const user = await findByName(name);
@@ -96,11 +124,13 @@ export const login = async (name) => {
   return user;
 };
 
-export const create = async ({ name, email, payroll, champion = false, role = ROLES.USER }) => {
+// requireContact is false only for the users the app creates by itself (seed files), which may come
+// with just the name, like the default admin: they can add their email or payroll number later
+export const create = async ({ name, email, payroll, champion = false, role = ROLES.USER }, { requireContact = true } = {}) => {
   const clean = validName(name);
   const cleanEmail = optionalEmail(email);
   const cleanPayroll = optionalPayroll(payroll);
-  assertContact(cleanEmail, cleanPayroll);
+  if (requireContact) assertContact(cleanEmail, cleanPayroll);
   const isChampion = validChampion(champion);
   if (!Object.values(ROLES).includes(role)) throw httpError(400, 'Rol no válido.');
   await assertNameFree(clean);
@@ -128,6 +158,17 @@ export const updateProfile = async (user, { name, email, payroll, avatar }) => {
   }
   if (email !== undefined || payroll !== undefined) assertContact(user.email, user.payroll);
   if (avatar !== undefined) user.avatar = avatar;
+  return user.save();
+};
+
+// For admins. The user is deactivated, not erased: the manitas keep who reported them and who is
+// in charge, and the name stays taken. A deleted user can no longer log in nor be picked.
+// Nobody can delete themselves, so there is always an admin left (the one deleting)
+export const remove = async (id, actor) => {
+  const user = await findById(id);
+  if (!user) throw httpError(404, 'Usuario no encontrado.');
+  if (user._id.equals(actor._id)) throw httpError(409, 'No puedes eliminar tu propio usuario.');
+  user.active = false;
   return user.save();
 };
 

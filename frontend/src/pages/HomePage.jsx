@@ -7,10 +7,10 @@ import { ROLES } from '../constants/roles.js';
 import { PANEL } from '../constants/styles.js';
 import zfLogo from '../assets/ZF_logo.svg';
 
-// Only admins register manitas; the other users follow the ones that already exist
+// Every user registers manitas and follows them; admins also manage users and responses
 const INTRO = {
   [ROLES.ADMIN]: 'Este es el formulario "manitas" para agregar una sugerencia o mostrar un punto de alerta en su área de trabajo.',
-  [ROLES.USER]: 'Consulta las manitas que tienes registradas o a tu cargo y sigue el avance de todas.',
+  [ROLES.USER]: 'Levanta la mano con una sugerencia o un punto de alerta en tu área de trabajo, consulta tus manitas y sigue el avance de todas.',
 };
 
 export default function HomePage() {

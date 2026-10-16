@@ -10,7 +10,7 @@ const app = express();
 
 // Global middlewares
 app.use(cors({ origin: process.env.CLIENT_ORIGIN }));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));   // room for the picture of an evidence (see models/Evidence.js)
 
 // Routes
 app.get('/api/health', (req, res) => res.json({ ok: true }));

@@ -21,4 +21,7 @@ export const markChampion = id => request(`/users/${id}/champion`, { method: 'PA
 // Admins only. Any of { name, email, payroll, champion } of another user
 export const updateUser = (id, data) => request(`/users/${id}`, { method: 'PATCH', body: data });
 
-export const updateUserRole = (id, role) => request(`/users/${id}/role`, { method: 'PATCH', body: { role } });
+// Admins only. Deactivates the user: their manitas are kept
+export const deleteUser = id => request(`/users/${id}`, { method: 'DELETE' });
+
+export const updateUserRole =(id, role) => request(`/users/${id}/role`, { method: 'PATCH', body: { role } });
