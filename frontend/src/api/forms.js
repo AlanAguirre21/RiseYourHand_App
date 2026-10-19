@@ -15,6 +15,10 @@ export const listAllResponses = () => request('/form/responses?scope=all');
 export const updateResponse = (id, answers) =>
   request(`/form/responses/${id}`, { method: 'PATCH', body: { answers } });
 
+// Admins only. Marks a finished manita as awarded (true), or takes the award back (false)
+export const awardResponse = (id, awarded) =>
+  request(`/form/responses/${id}/award`, { method: 'PATCH', body: { awarded } });
+
 // Admins only. Every manita, for the dashboard
 export const listDashboard = () => request('/form/dashboard');
 

@@ -16,6 +16,8 @@ const responseSchema = new mongoose.Schema({
   // Tracking: percentage of advance, and when it reached 100 (null while unfinished)
   progress: { type: Number, default: 0, min: 0, max: 100 },
   completedAt: { type: Date, default: null },
+  // When an admin marked the finished manita as awarded to who reported it (null while not awarded)
+  awardedAt: { type: Date, default: null },
 }, { timestamps: true });
 
 responseSchema.index({ folio: 1 }, { unique: true, partialFilterExpression: { folio: { $type: 'number' } } });

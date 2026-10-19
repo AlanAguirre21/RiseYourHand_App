@@ -172,12 +172,11 @@ Todas las rutas cuelgan de `/api`. La sesión se envía como `Authorization: Bea
 | GET | `/health` | Público | Estado del servidor |
 | POST | `/auth/login` | Público | Acceso por nombre |
 | GET | `/auth/me` | Sesión | Usuario de la sesión |
-| POST | `/users` | Público | Crea un usuario (nombre, correo y número de nómina) |
-| PATCH | `/users/me` | Sesión | Edita el nombre, el correo, el número de nómina o el avatar propios |
+| POST | `/users` | Público | Crea un usuario (nombre, correo y número de nómina). Un admin también elige el rol y puede crear un champion (`champion: true`, con su `area` y correo) |
+| PATCH | `/users/me` | Sesión | Edita el nombre, el correo, el número de nómina o el avatar propios (un champion no puede cambiar su nombre) |
 | GET | `/users` | Admin | Lista de usuarios |
 | GET | `/users/names` | Sesión | Nombres de los usuarios, para elegirlos en el formulario |
-| PATCH | `/users/:id` | Admin | Edita el nombre, el correo, el número de nómina o si es champion |
-| PATCH | `/users/:id/champion` | Sesión | Marca a un usuario como champion |
+| PATCH | `/users/:id` | Admin | Edita el nombre, el correo, el número de nómina o, de un champion, su área (los champions iniciales, con su área, vienen de `backend/src/seed/default_champions.json`) |
 | PATCH | `/users/:id/role` | Admin | Cambia el rol de un usuario |
 | GET | `/form` | Sesión | Formulario vigente |
 | POST | `/form/responses` | Admin | Guarda una respuesta |
@@ -185,6 +184,7 @@ Todas las rutas cuelgan de `/api`. La sesión se envía como `Authorization: Bea
 | PATCH | `/form/responses/:id` | Admin | Edita las respuestas de un registro |
 | GET | `/form/dashboard` | Admin | Todas las manitas, para el dashboard |
 | GET | `/form/tracking` | Sesión | Todas las manitas, para la página de seguimiento (solo lectura) |
+| PATCH | `/form/responses/:id/award` | Admin | Marca una manita terminada como premiada (`{ awarded: true }`) o le quita el premio |
 | PATCH | `/form/responses/:id/tracking` | Admin | Inicia una manita o cambia su avance |
 | GET | `/form/export-key` | Admin | Clave del enlace de exportación |
 | GET | `/form/responses.csv?key=…` | Clave | Todas las respuestas en CSV |

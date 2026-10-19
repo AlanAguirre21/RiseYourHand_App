@@ -22,13 +22,13 @@ export default function RoleCard({ user, onSaved }) {
   const Icon = isAdmin ? ShieldCheck : User;
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!isAdmin || user.system) return;
     let active = true;
     listUsers()
       .then(users => { if (active) setOnlyAdmin(users.filter(u => u.role === ROLES.ADMIN).length <= 1); })
       .catch(() => {});
     return () => { active = false; };
-  }, [isAdmin]);
+  }, [isAdmin, user.system]);
 
   async function handleConfirm() {
     setBusy(true);
@@ -61,7 +61,9 @@ export default function RoleCard({ user, onSaved }) {
         </div>
       </div>
 
-      {isAdmin ? (
+      {user.system ? (
+        <p className="mt-4 text-xs text-text-faint">Eres el administrador predeterminado: tu rol no se puede cambiar.</p>
+      ) : isAdmin ? (
         <>
           <Button className="mt-4" disabled={onlyAdmin} onClick={() => { setError(null); setConfirming(true); }}>
             Cambiar mi rol a {ROLE_LABELS[ROLES.USER]}

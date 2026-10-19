@@ -14,7 +14,7 @@ const emptyValue = question => (question.type === 'multiple' ? [] : '');
 
 // A "user" answer as a closed field: the users are listed on click, in a panel that floats over
 // the card instead of making it taller. The list is four users tall and scrolls
-function UserSelect({ id, value, onChange, disabled, championsOnly }) {
+function UserSelect({ id, value, onChange, disabled }) {
   const ref = useRef(null);
   const [open, setOpen] = useState(false);
 
@@ -52,7 +52,6 @@ function UserSelect({ id, value, onChange, disabled, championsOnly }) {
             value={value}
             onPick={name => { onChange(name); setOpen(false); }}
             disabled={disabled}
-            championsOnly={championsOnly}
             autoFocus
             listClassName="max-h-36 overflow-y-scroll"
           />
@@ -125,7 +124,7 @@ function AnswerField({ id, question, value, onChange, disabled }) {
     );
   }
   if (question.type === 'user') {
-    return <UserSelect id={id} value={value} onChange={onChange} disabled={disabled} championsOnly={question.champions === true} />;
+    return <UserSelect id={id} value={value} onChange={onChange} disabled={disabled} />;
   }
   if (question.type === 'date') {
     return <DateInput id={id} value={value} onChange={onChange} disabled={disabled} />;

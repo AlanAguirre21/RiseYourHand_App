@@ -84,8 +84,9 @@ export function OptionReplies({ question, onAnswer, onOther, typingOther, disabl
 }
 
 // Users to pick for a "user" question (answers on click), with the way to register a missing one.
-// A question with "users" offers just those, as "label: name", and answers with the name
-export function UserReplies({ question, onAnswer, disabled }) {
+// A question with "users" offers just those, as "label: name", and answers with the name.
+// "defaultName" (the user filling the form) comes first, already checked: one click answers with it
+export function UserReplies({ question, onAnswer, defaultName = null, disabled }) {
   if (question.users?.length) {
     return (
       <div className="flex items-end justify-start gap-2">
@@ -104,7 +105,16 @@ export function UserReplies({ question, onAnswer, disabled }) {
     <div className="flex items-end justify-start gap-2">
       <Avatar size={26} />
       <div className="glass neu-raised w-full max-w-xs rounded-2xl rounded-bl-sm border border-white/60 bg-white/65 p-1.5">
-        <UserPicker onPick={onAnswer} disabled={disabled} championsOnly={question.champions === true} />
+        {defaultName && (
+          <>
+            <MenuOption icon={<CircleCheck size={16} />} onClick={() => onAnswer(defaultName)} disabled={disabled}>
+              <span className="min-w-0 flex-1 truncate">{defaultName}</span>
+              <span className="shrink-0 text-xs font-normal text-text-muted">Soy yo</span>
+            </MenuOption>
+            <p className="mt-1 border-t border-white/60 px-1.5 pb-1.5 pt-2 text-xs font-medium text-text-muted">O elige a otro usuario:</p>
+          </>
+        )}
+        <UserPicker value={defaultName ?? ''} onPick={onAnswer} disabled={disabled} />
       </div>
     </div>
   );

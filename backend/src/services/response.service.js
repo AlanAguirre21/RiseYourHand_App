@@ -40,6 +40,7 @@ export const toPublicResponse = (response, form, user) => ({
   answers: response.answers,
   computed: form ? computeFields(form, response.answers, { folio: response.folio ?? null }) : [],
   tracking: trackingOf(response),
+  awardedAt: response.awardedAt ?? null,
   createdAt: response.createdAt,
 });
 
@@ -129,8 +130,9 @@ const cleanAnswers = async (form, byKey, { fillAuto = false, now = new Date() } 
       // Stored as the name of the user, as it is written in their account
       const user = typeof value === 'string' ? await findByName(value) : null;
       if (!user) throw badRequest(`No hay ningún usuario llamado «${String(value).slice(0, 100)}». Elige uno de la lista o regístralo.`);
+      if (user.system) throw badRequest(`«${user.name}» no se puede elegir como respuesta. Elige a otro usuario.`);
       if (q.champions && !user.champion) {
-        throw badRequest(`«${user.name}» no está marcado como champion. Elige un champion o márcalo como tal.`);
+        throw badRequest(`«${user.name}» no es champion. Elige uno de los champions de la lista.`);
       }
       if (q.users && !q.users.some((u) => sameName(u.name, user.name))) {
         throw badRequest(`«${user.name}» no es una de las opciones de «${q.text}».`);
@@ -286,6 +288,9 @@ export const updateTracking = async (id, { started, progress, evidence } = {}, u
     if (!isStarted(response)) {
       throw Object.assign(new Error('La manita todavía no se ha iniciado.'), { status: 409 });
     }
+    if (response.awardedAt && progress < 100) {
+      throw Object.assign(new Error('La manita ya fue premiada: quita el premio antes de bajar su avance.'), { status: 409 });
+    }
     const from = response.progress ?? 0;
     if (progress !== from && !skipsEvidence) {
       record = newEvidence(response, user, from, progress, evidence);
@@ -299,6 +304,22 @@ export const updateTracking = async (id, { started, progress, evidence } = {}, u
   await response.save();
   if (record) await record.save();
   return toPublicResponse(response, form, response.user);
+};
+
+// Admins only. Marks a finished manita as awarded ({ awarded: true }), or takes the award back
+export const updateAward = async (id, { awarded } = {}) => {
+  if (typeof awarded !== 'boolean') throw badRequest('El campo awarded debe ser verdadero o falso.');
+  const response = mongoose.isValidObjectId(id)
+    ? await Response.findOne({ _id: id, formKey: FORM_KEY }).populate('user', 'name')
+    : null;
+  if (!response) throw notFound('Respuesta no encontrada.');
+  if (awarded && !trackingOf(response).completedAt) {
+    throw Object.assign(new Error('Solo se puede premiar una manita terminada.'), { status: 409 });
+  }
+  if (awarded) response.awardedAt ??= new Date();
+  else response.awardedAt = null;
+  await response.save();
+  return toPublicResponse(response, await findVersion(response.formVersion), response.user);
 };
 
 // The evidences of a response, newest first, with the name of who added each one

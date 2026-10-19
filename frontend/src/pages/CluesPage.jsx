@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Play, Search } from 'lucide-react';
+import { Link } from 'react-router';
+import { ArrowUpRight, Award, Play, Search } from 'lucide-react';
 import PageContainer from '../components/layout/PageContainer.jsx';
 import StatusMessage from '../components/StatusMessage.jsx';
 import Button from '../components/Button.jsx';
@@ -8,7 +9,8 @@ import { useAuth } from '../hooks/useAuth.js';
 import { useLiveData } from '../hooks/useLiveData.js';
 import { listTracking, updateResponseTracking } from '../api/forms.js';
 import { PANEL } from '../constants/styles.js';
-import { TRACKING_KEYS, TRACKING_STATES, isDone } from '../constants/tracking.js';
+import { ALL, PAGE_SIZES } from '../constants/lists.js';
+import { OWNER_FILTERS, TRACKING_KEYS, TRACKING_STATES, isDone } from '../constants/tracking.js';
 import { computedValue, sameName } from '../utils/answers.js';
 import { ROLES } from '../constants/roles.js';
 
@@ -22,7 +24,10 @@ const days = n => `${n} ${n === 1 ? 'día' : 'días'}`;
 
 const PROGRESS_STEP = 5;
 const KNOB_PX = 20;   // the "size-5" circle at the end of the progress bar
-const ALL = 'all';
+const FINISHED = 'finished';   // filter: finished in time or late
+
+const matchesState = (response, filter) =>
+  filter === ALL || (filter === FINISHED ? isDone(response.tracking.state) : response.tracking.state === filter);
 
 const normalize = text => String(text).normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
 
@@ -63,8 +68,9 @@ function byUrgency(a, b) {
   return left(a) - left(b);
 }
 
-// "evidenceOptional": admins may save a new progress without evidence
-function ManitaCard({ response, canEdit, evidenceOptional, onSaved }) {
+// "evidenceOptional": admins may save a new progress without evidence. "linkToRecord": a finished
+// manita links to its card in the record of responses (only admins can open it)
+function ManitaCard({ response, canEdit, evidenceOptional, linkToRecord, onSaved }) {
   const { tracking } = response;
   const [draft, setDraft] = useState(null);   // progress while the bar is being dragged
   const [busy, setBusy]   = useState(false);
@@ -213,6 +219,20 @@ function ManitaCard({ response, canEdit, evidenceOptional, onSaved }) {
 
       {error && <div className="mt-3"><StatusMessage error={error} /></div>}
 
+      {linkToRecord && isDone(tracking.state) && (
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <Link
+            to={`/registro?manita=${response.id}`}
+            className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline"
+          >
+            Ver la manita en el registro <ArrowUpRight size={14} />
+          </Link>
+          {response.awardedAt && (
+            <span className="inline-flex items-center gap-1 text-xs text-text-muted"><Award size={14} /> Premiada</span>
+          )}
+        </div>
+      )}
+
       {tracking.started && (
         <div className="mt-3 border-t border-white/50 pt-3">
           <button
@@ -249,17 +269,24 @@ export default function CluesPage() {
     || (user.champion === true && sameName(answerOf(response, TRACKING_KEYS.champion) ?? '', user.name));
   const { data: responses, setData, error } = useLiveData(listTracking);
   const [filter, setFilter] = useState(ALL);
+  const [owner, setOwner] = useState(ALL);
   const [query, setQuery] = useState('');
+  const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
+
+  const ownerFilters = Object.entries(OWNER_FILTERS).filter(([, f]) => !f.championsOnly || user.champion === true);
+  const isMine = response => owner === ALL || sameName(answerOf(response, OWNER_FILTERS[owner].key) ?? '', user.name);
 
   const words = normalize(query).split(/\s+/).filter(Boolean);
-  const shown = responses
-    ?.filter(r => filter === ALL || r.tracking.state === filter)
+  const matching = responses
+    ?.filter(r => matchesState(r, filter))
+    .filter(isMine)
     .filter(r => {
       if (words.length === 0) return true;
       const text = searchText(r);
       return words.every(word => text.includes(word));
     })
     .sort(byUrgency);
+  const shown = pageSize === ALL ? matching : matching?.slice(0, pageSize);
 
   return (
     <PageContainer size="lg">
@@ -273,23 +300,44 @@ export default function CluesPage() {
         </p>
       </div>
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <div className="relative min-w-[200px] flex-1">
-          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-faint" />
-          <Input
-            type="search"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Buscar manita, champion, área o usuario…"
-            aria-label="Buscar manitas"
-            className="pl-9"
-          />
-        </div>
+      {/* The search on its own row; the three filters together below it */}
+      <div className="relative mt-6">
+        <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-faint" />
+        <Input
+          type="search"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Buscar manita, champion, área o usuario…"
+          aria-label="Buscar manitas"
+          className="pl-9"
+        />
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2 text-xs font-medium text-text-muted">
-          Mostrar
+          Estado
           <Select block={false} value={filter} onChange={e => setFilter(e.target.value)}>
             <option value={ALL}>Todas</option>
+            <option value={FINISHED}>Terminadas (a tiempo o no)</option>
             {Object.entries(TRACKING_STATES).map(([key, s]) => <option key={key} value={key}>{s.label}</option>)}
+          </Select>
+        </label>
+        <label className="flex items-center gap-2 text-xs font-medium text-text-muted">
+          De
+          <Select block={false} value={owner} onChange={e => setOwner(e.target.value)}>
+            <option value={ALL}>Todos</option>
+            {ownerFilters.map(([key, f]) => <option key={key} value={key}>{f.label}</option>)}
+          </Select>
+        </label>
+        <label className="flex items-center gap-2 text-xs font-medium text-text-muted">
+          Mostrar
+          <Select
+            block={false}
+            value={pageSize}
+            onChange={e => setPageSize(e.target.value === ALL ? ALL : Number(e.target.value))}
+          >
+            {PAGE_SIZES.map(size => <option key={size} value={size}>{size}</option>)}
+            <option value={ALL}>Todas</option>
           </Select>
         </label>
       </div>
@@ -297,13 +345,22 @@ export default function CluesPage() {
       <div className="mt-6 space-y-4">
         {error && <StatusMessage error={error} />}
         {!error && !responses && <StatusMessage loading />}
+        {responses?.length > 0 && (
+          <p className="text-sm text-text-muted">
+            {shown.length < matching.length && `Mostrando ${shown.length} de `}
+            {matching.length} {matching.length === 1 ? 'manita' : 'manitas'}
+            {matching.length < responses.length && ` (de ${responses.length} en total)`}
+          </p>
+        )}
         {shown?.length === 0 && (
           <p className={`py-12 text-center text-sm text-text-muted ${PANEL}`}>
             {responses.length === 0
               ? 'Todavía no hay manitas registradas.'
               : words.length > 0
                 ? 'Ninguna manita coincide con la búsqueda.'
-                : 'Ninguna manita está en ese estado.'}
+                : owner !== ALL
+                  ? `No tienes manitas ${filter === ALL ? '' : 'en ese estado '}${owner === 'champion' ? 'a tu cargo' : 'reportadas por ti'}.`
+                  : 'Ninguna manita está en ese estado.'}
           </p>
         )}
         {shown?.map(response => (
@@ -312,6 +369,7 @@ export default function CluesPage() {
             response={response}
             canEdit={canEdit(response)}
             evidenceOptional={isAdmin}
+            linkToRecord={isAdmin}
             onSaved={updated => setData(list => list.map(r => (r.id === updated.id ? updated : r)))}
           />
         ))}

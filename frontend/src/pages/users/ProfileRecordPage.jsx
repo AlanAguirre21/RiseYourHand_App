@@ -8,6 +8,7 @@ import { ROLES } from '../../constants/roles.js';
 
 export default function ProfileRecordPage() {
   const { user } = useAuth();
+  const isAdmin = user.role === ROLES.ADMIN;
 
   return (
     <PageContainer size="lg">
@@ -16,11 +17,20 @@ export default function ProfileRecordPage() {
           <h1 className="text-2xl font-semibold text-text">Mis respuestas</h1>
           <p className="mt-1 text-sm text-text-muted">Las manitas que has reportado y las que tienes a cargo como champion, de la más reciente a la más antigua.</p>
         </div>
-        {user.role === ROLES.ADMIN && <Button as={Link} to="/formulario" variant="primary">Registrar manita</Button>}
+        {isAdmin && <Button as={Link} to="/formulario" variant="primary">Registrar manita</Button>}
       </div>
 
       <div className="mt-6 space-y-4">
-        <ResponsesList load={listMyResponses} showUser searchable championName={user.name} emptyText="Todavía no tienes ninguna manita." />
+        {/* Only admins can edit a manita (the backend checks it too) */}
+        <ResponsesList
+          load={listMyResponses}
+          showUser
+          searchable
+          editable={isAdmin}
+          grayFinished
+          championName={user.name}
+          emptyText="Todavía no tienes ninguna manita."
+        />
       </div>
     </PageContainer>
   );

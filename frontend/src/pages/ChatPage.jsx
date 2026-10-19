@@ -22,7 +22,7 @@ const STATUS_TEXT = {
   date: 'Selecciona una fecha',
   single: 'Elige una opción',
   multiple: 'Elige una o varias opciones y confirma',
-  user: 'Elige un usuario o registra uno nuevo',
+  user: 'Confirma tu nombre, o elige o registra a otro usuario',
   number: 'Escribe un número entero',
 };
 
@@ -128,7 +128,18 @@ export default function ChatPage() {
         />
       );
     } else if (q.type === 'user') {
-      messages.push(<UserReplies key={`o-${q.key}`} question={q} onAnswer={answerQuestion} disabled={sending} />);
+      // Whoever fills the form is the default answer of a question open to every user (e.g. who
+      // raised the hand); a question with its own list of users (the champions) has no default, and
+      // neither does the default admin, who cannot be picked
+      messages.push(
+        <UserReplies
+          key={`o-${q.key}`}
+          question={q}
+          onAnswer={answerQuestion}
+          defaultName={q.users?.length || me.system ? null : me.name}
+          disabled={sending}
+        />
+      );
     }
   });
 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { Check, Link } from 'lucide-react';
 import PageContainer from '../components/layout/PageContainer.jsx';
 import ResponsesList from '../components/ResponsesList.jsx';
@@ -39,13 +40,24 @@ function PowerBiExport() {
 }
 
 export default function ResponsesPage() {
+  // "?manita=<id>": the manita linked from the tracking page
+  const [params] = useSearchParams();
+
   return (
     <PageContainer size="lg">
       <h1 className="text-2xl font-semibold text-text">Registro de respuestas</h1>
       <p className="mt-1 text-sm text-text-muted">Las manitas registradas por todos los usuarios, de la más reciente a la más antigua. Haz clic en una para editarla.</p>
       <PowerBiExport />
       <div className="mt-6 space-y-4">
-        <ResponsesList load={listAllResponses} showUser searchable editable emptyText="Todavía no hay respuestas registradas." />
+        <ResponsesList
+          load={listAllResponses}
+          showUser
+          searchable
+          statusFilter
+          editable
+          focusId={params.get('manita')}
+          emptyText="Todavía no hay respuestas registradas."
+        />
       </div>
     </PageContainer>
   );

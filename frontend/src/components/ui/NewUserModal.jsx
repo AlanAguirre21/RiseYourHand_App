@@ -8,8 +8,8 @@ import { CONTACT_HINT, cleanName, cleanEmail, cleanPayroll, isValidName, isValid
 
 // Registers a user with the same data as the register page, without leaving the current one.
 // Mount it only while it is open (it starts from "initialName"). It is rendered in <body> so it
-// can be used inside another form. With "champion" the user is registered as a champion
-export default function NewUserModal({ initialName = '', champion = false, onCreated, onClose }) {
+// can be used inside another form
+export default function NewUserModal({ initialName = '', onCreated, onClose }) {
   const ref = useRef(null);
   const [name, setName]       = useState(initialName);
   const [email, setEmail]     = useState('');
@@ -37,7 +37,7 @@ export default function NewUserModal({ initialName = '', champion = false, onCre
     setBusy(true);
     setError(null);
     try {
-      onCreated(await createUser(champion ? { ...data, champion: true } : data));
+      onCreated(await createUser(data));
     } catch (err) {
       setError(err.message);
       setBusy(false);
@@ -54,7 +54,7 @@ export default function NewUserModal({ initialName = '', champion = false, onCre
         backdrop:bg-black/30 backdrop:backdrop-blur-sm"
     >
       <form onSubmit={handleSubmit} className="p-6">
-        <h2 id="new-user-modal-title" className="text-lg font-semibold text-text">{champion ? 'Registrar nuevo champion' : 'Registrar nuevo usuario'}</h2>
+        <h2 id="new-user-modal-title" className="text-lg font-semibold text-text">Registrar nuevo usuario</h2>
         <p className="mt-1 text-sm text-text-muted">Podrá iniciar sesión con su nombre.</p>
 
         <div className="mt-4 space-y-4">
@@ -101,7 +101,7 @@ export default function NewUserModal({ initialName = '', champion = false, onCre
         <div className="mt-6 flex justify-end gap-2">
           <Button onClick={close} disabled={busy}>Cancelar</Button>
           <Button type="submit" variant="primary" disabled={!isValid || busy}>
-            {busy ? 'Registrando…' : champion ? 'Registrar champion' : 'Registrar usuario'}
+            {busy ? 'Registrando…' : 'Registrar usuario'}
           </Button>
         </div>
       </form>

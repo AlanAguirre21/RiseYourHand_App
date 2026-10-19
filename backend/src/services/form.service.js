@@ -1,6 +1,7 @@
 import Form, { QUESTION_TYPES, COMPUTED_OPS, AUTO_OPS, PREFILL_FIELDS } from '../models/Form.js';
 import Response from '../models/Response.js';
 import { FOLIO_KEY, templateKeys } from '../utils/computed.js';
+import { findChampions } from './user.service.js';
 import formData from '../seed/form.json' with { type: 'json' };
 
 export const FORM_STATUS_MESSAGES = {
@@ -11,6 +12,19 @@ export const FORM_STATUS_MESSAGES = {
 
 // The project has a single form: the one defined in seed/form.json
 export const FORM_KEY = formData.key;
+
+// The choices of the question for champions ("champions": true) are not written in form.json: they
+// are the champions registered (seeded from seed/default_champions.json, or added by an admin),
+// shown as "area: name". They are added when the form is read, so every version offers the current ones
+const championChoices = async () => (await findChampions()).map((u) => ({ label: u.area, name: u.name }));
+
+const withChampions = (form, choices) => form && {
+  ...form,
+  sections: form.sections.map((s) => ({
+    ...s,
+    questions: (s.questions ?? []).map((q) => (q.champions ? { ...q, users: choices } : q)),
+  })),
+};
 
 export function validate(form) {
   const fail = msg => { throw new Error(`"${form.key}": ${msg}`); };
@@ -110,6 +124,8 @@ const definitionOf = (form) => {
 //   'outdated' - form.json changed but this version already has responses: increment "version"
 //   null       - nothing to do
 export const ensureForm = async () => {
+  const listed = formData.sections?.flatMap((s) => s.questions ?? []).find((q) => q.champions && q.users);
+  if (listed) throw new Error(`"${formData.key}": question "${listed.key}" takes its users from the registered champions, not from "users"`);
   validate(formData);
   const stored = await Form.findOne({ key: formData.key, version: formData.version }).lean();
   if (!stored) {
@@ -125,16 +141,20 @@ export const ensureForm = async () => {
   return 'updated';
 };
 
-export const findVersion = (version) => Form.findOne({ key: FORM_KEY, version }).lean();
+export const findVersion = async (version) =>
+  withChampions(await Form.findOne({ key: FORM_KEY, version }).lean(), await championChoices());
 
 // Every stored version, oldest first
-export const listVersions = () => Form.find({ key: FORM_KEY }).sort({ version: 1 }).lean();
+export const listVersions = async () => {
+  const [forms, choices] = await Promise.all([Form.find({ key: FORM_KEY }).sort({ version: 1 }).lean(), championChoices()]);
+  return forms.map((f) => withChampions(f, choices));
+};
 
 // Latest version: the one new responses are filled against
 export const getCurrent = async () => {
   const form = await Form.findOne({ key: FORM_KEY }).sort({ version: -1 }).lean();
   if (!form) throw Object.assign(new Error('Form not found'), { status: 404 });
-  return form;
+  return withChampions(form, await championChoices());
 };
 
 export const toPublicForm = f => ({

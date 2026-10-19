@@ -1,14 +1,14 @@
 [
-  { "name": "Daniela Pimentel", "email": "daniela.pimentel@zf.com" },
-  { "name": "Gerardo Delgado", "email": "gerardo.delgado@zf.com" },
-  { "name": "Silvia Olvera", "email": "silvia.olvera@zf.com" },
-  { "name": "Israel Rodriguez", "email": "israel.rodriguez@zf.com" },
-  { "name": "Daniel Moreno", "email": "daniel.moreno@zf.com" },
-  { "name": "Karla Velazquez", "email": "karla.velazquez@zf.com" },
-  { "name": "Veronica Garcia", "email": "veronica.garcia@zf.com" },
-  { "name": "Cristian Vazquez", "email": "cristian.vazquez@zf.com" },
-  { "name": "Miguel Contreras", "email": "miguel.contreras@zf.com" },
-  { "name": "Jose Luis Suarez", "email": "jose.suarez@zf.com" },
-  { "name": "Cristian Montes", "email": "cristian.montes@zf.com" },
-  { "name": "César de la Torre", "email": "cesar.delatorre@zf.com" }
+  { "area": "Mantenimiento", "name": "Daniela Pimentel", "email": "daniela.pimentel@zf.com" },
+  { "area": "Recursos Humanos", "name": "Gerardo Delgado", "email": "gerardo.delgado@zf.com" },
+  { "area": "Operaciones N1", "name": "Silvia Olvera", "email": "silvia.olvera@zf.com" },
+  { "area": "Operaciones N2", "name": "Israel Rodriguez", "email": "israel.rodriguez@zf.com" },
+  { "area": "Seguridad", "name": "Daniel Moreno", "email": "daniel.moreno@zf.com" },
+  { "area": "Medio Ambiente", "name": "Karla Velazquez", "email": "karla.velazquez@zf.com" },
+  { "area": "Calidad", "name": "Veronica Garcia", "email": "veronica.garcia@zf.com" },
+  { "area": "ZFPS", "name": "Cristian Vazquez", "email": "cristian.vazquez@zf.com" },
+  { "area": "Manufactura Avanzada", "name": "Miguel Contreras", "email": "miguel.contreras@zf.com" },
+  { "area": "Logística", "name": "Jose Luis Suarez", "email": "jose.suarez@zf.com" },
+  { "area": "Idea CIS", "name": "Cristian Montes", "email": "cristian.montes@zf.com" },
+  { "area": "Otro", "name": "César de la Torre", "email": "cesar.delatorre@zf.com" }
 ]

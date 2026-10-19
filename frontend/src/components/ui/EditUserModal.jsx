@@ -7,13 +7,15 @@ import { updateUser } from '../../api/users.js';
 import { ROLE_LABELS } from '../../constants/roles.js';
 import { CONTACT_HINT, cleanName, cleanEmail, cleanPayroll, isValidName, isValidContact } from '../../utils/userFields.js';
 
-// Users created before these fields existed have no email nor payroll number yet
+// Users created before these fields existed have no email nor payroll number yet. Only champions
+// have an area
 const valuesOf = user => ({
-  name: user.name, email: user.email ?? '', payroll: user.payroll ?? '', champion: user.champion ?? false,
+  name: user.name, email: user.email ?? '', payroll: user.payroll ?? '',
+  ...(user.champion && { area: user.area ?? '' }),
 });
 
 
-// An admin edits the data of any user. Mount it only while it is open
+// An admin edits the data of any user (and the area in charge of a champion). Mount it only while it is open
 export default function EditUserModal({ user, onSaved, onClose }) {
   const ref = useRef(null);
   const [values, setValues] = useState(() => valuesOf(user));
@@ -27,14 +29,16 @@ export default function EditUserModal({ user, onSaved, onClose }) {
   }, []);
 
   const clean = {
-    name: cleanName(values.name), email: cleanEmail(values.email), payroll: cleanPayroll(values.payroll), champion: values.champion,
+    name: cleanName(values.name), email: cleanEmail(values.email), payroll: cleanPayroll(values.payroll),
+    ...(user.champion && { area: cleanName(values.area) }),
   };
   const current = valuesOf(user);
   // Only the fields that changed are sent, and only those have to be valid
   const changes = Object.fromEntries(Object.entries(clean).filter(([key, value]) => value !== current[key]));
   const changed = Object.keys(changes).length > 0;
   const isValid = (!('name' in changes) || isValidName(clean.name))
-    && (!('email' in changes || 'payroll' in changes) || isValidContact(clean));
+    && (!('email' in changes || 'payroll' in changes) || isValidContact(clean))
+    && (!('area' in changes) || clean.area.length > 0);
 
   const setField = key => e => setValues(v => ({ ...v, [key]: e.target.value }));
 
@@ -81,14 +85,37 @@ export default function EditUserModal({ user, onSaved, onClose }) {
               value={values.name}
               onChange={setField('name')}
               maxLength={100}
-              autoFocus
+              autoFocus={!user.champion && !user.system}
+              readOnly={user.champion || user.system}
               autoComplete="off"
               aria-describedby="edit-user-name-hint"
             />
             <p id="edit-user-name-hint" className="mt-1 text-xs text-text-faint">
-              Es el nombre con el que inicia sesión: si lo cambias, tendrá que usar el nuevo.
+              {user.system
+                ? 'Es el administrador predeterminado: su nombre no se puede cambiar.'
+                : user.champion
+                  ? 'Es champion: su nombre no se puede cambiar, porque así aparece en las manitas a su cargo.'
+                  : 'Es el nombre con el que inicia sesión: si lo cambias, tendrá que usar el nuevo.'}
             </p>
           </div>
+          {user.champion && (
+            <div>
+              <Label htmlFor="edit-user-area">Área o departamento a cargo</Label>
+              <Input
+                id="edit-user-area"
+                value={values.area}
+                onChange={setField('area')}
+                maxLength={100}
+                autoFocus
+                autoComplete="off"
+                placeholder="p. ej. Mantenimiento"
+                aria-describedby="edit-user-area-hint"
+              />
+              <p id="edit-user-area-hint" className="mt-1 text-xs text-text-faint">
+                Así aparece como opción en el formulario de manitas.
+              </p>
+            </div>
+          )}
           <div>
             <Label htmlFor="edit-user-email">Correo electrónico</Label>
             <Input
@@ -113,15 +140,6 @@ export default function EditUserModal({ user, onSaved, onClose }) {
             />
             <p className="mt-1 text-xs text-text-faint">{CONTACT_HINT}</p>
           </div>
-          <label className="flex items-center gap-2 text-sm text-text">
-            <input
-              type="checkbox"
-              checked={values.champion}
-              onChange={e => setValues(v => ({ ...v, champion: e.target.checked }))}
-              className="size-4 accent-accent"
-            />
-            Es champion
-          </label>
         </div>
 
         {error && <div className="mt-4"><StatusMessage error={error} /></div>}

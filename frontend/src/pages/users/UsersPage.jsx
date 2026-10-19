@@ -8,7 +8,7 @@ import EditUserModal from '../../components/ui/EditUserModal.jsx';
 import UserAvatar from '../../components/profile/UserAvatar.jsx';
 import { Input, Label, Select } from '../../components/Input.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
-import { createUser, deleteUser, listUsers, updateUser as saveUser, updateUserRole } from '../../api/users.js';
+import { createUser, deleteUser, listUsers, updateUserRole } from '../../api/users.js';
 import { ROLES, ROLE_LABELS } from '../../constants/roles.js';
 import { PANEL } from '../../constants/styles.js';
 import { CONTACT_HINT, cleanName, cleanEmail, cleanPayroll, isValidName, isValidContact } from '../../utils/userFields.js';
@@ -17,24 +17,28 @@ const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'medium' });
 const byName = (a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' });
 const normalize = text => String(text).normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
 
-// Whether a user matches every word searched, in their name, email, payroll number or role
+// Whether a user matches every word searched, in their name, email, payroll number, role or area
 const matches = (user, words) => {
-  const text = normalize([user.name, user.email, user.payroll, ROLE_LABELS[user.role], user.champion ? 'champion' : ''].join(' '));
+  const text = normalize([user.name, user.email, user.payroll, ROLE_LABELS[user.role], user.champion ? `champion ${user.area ?? ''}` : ''].join(' '));
   return words.every(word => text.includes(word));
 };
 
-function NewUserForm({ onCreated }) {
+// Adds a user. With "champion" it adds a champion instead: it also asks for the area or department
+// in their charge, and the email is required (the manitas assigned to them are sent there)
+function NewUserForm({ champion = false, onCreated }) {
   const [name, setName]   = useState('');
+  const [area, setArea]   = useState('');
   const [email, setEmail] = useState('');
   const [payroll, setPayroll] = useState('');
   const [role, setRole]   = useState(ROLES.USER);
-  const [champion, setChampion] = useState(false);
   const [busy, setBusy]   = useState(false);
   const [error, setError] = useState(null);
   const [created, setCreated] = useState(null);
 
+  const idPrefix = champion ? 'new-champion' : 'new-user';
   const data = { name: cleanName(name), email: cleanEmail(email), payroll: cleanPayroll(payroll) };
-  const isValid = isValidName(data.name) && isValidContact(data);
+  const cleanArea = cleanName(area);
+  const isValid = isValidName(data.name) && isValidContact(data) && (!champion || (cleanArea && data.email));
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -44,13 +48,13 @@ function NewUserForm({ onCreated }) {
     setCreated(null);
 
     try {
-      const user = await createUser({ ...data, role, champion });
+      const user = await createUser(champion ? { ...data, role, champion: true, area: cleanArea } : { ...data, role });
       onCreated(user);
       setCreated(user);
       setName('');
+      setArea('');
       setEmail('');
       setPayroll('');
-      setChampion(false);
       setRole(ROLES.USER);
     } catch (err) {
       setError(err.message);
@@ -60,14 +64,14 @@ function NewUserForm({ onCreated }) {
   }
 
   return (
-    <section aria-labelledby="new-user-title" className={`p-5 ${PANEL}`}>
-      <h2 id="new-user-title" className="font-semibold text-text">Nuevo usuario</h2>
+    <section aria-labelledby={`${idPrefix}-title`} className={`p-5 ${PANEL}`}>
+      <h2 id={`${idPrefix}-title`} className="font-semibold text-text">{champion ? 'Nuevo champion' : 'Nuevo usuario'}</h2>
 
       <form onSubmit={handleSubmit} className="mt-3 flex flex-wrap items-end gap-3">
         <div className="min-w-56 flex-1">
-          <Label htmlFor="new-user-name">Nombre completo</Label>
+          <Label htmlFor={`${idPrefix}-name`}>Nombre completo</Label>
           <Input
-            id="new-user-name"
+            id={`${idPrefix}-name`}
             value={name}
             onChange={e => setName(e.target.value)}
             maxLength={100}
@@ -75,10 +79,23 @@ function NewUserForm({ onCreated }) {
             placeholder="p. ej. Juan Pérez"
           />
         </div>
+        {champion && (
+          <div className="min-w-56 flex-1">
+            <Label htmlFor={`${idPrefix}-area`}>Área o departamento a cargo</Label>
+            <Input
+              id={`${idPrefix}-area`}
+              value={area}
+              onChange={e => setArea(e.target.value)}
+              maxLength={100}
+              autoComplete="off"
+              placeholder="p. ej. Mantenimiento"
+            />
+          </div>
+        )}
         <div className="min-w-56 flex-1">
-          <Label htmlFor="new-user-email">Correo electrónico</Label>
+          <Label htmlFor={`${idPrefix}-email`}>Correo electrónico</Label>
           <Input
-            id="new-user-email"
+            id={`${idPrefix}-email`}
             type="email"
             value={email}
             onChange={e => setEmail(e.target.value)}
@@ -88,9 +105,9 @@ function NewUserForm({ onCreated }) {
           />
         </div>
         <div className="min-w-32">
-          <Label htmlFor="new-user-payroll">Número de nómina</Label>
+          <Label htmlFor={`${idPrefix}-payroll`}>Número de nómina</Label>
           <Input
-            id="new-user-payroll"
+            id={`${idPrefix}-payroll`}
             value={payroll}
             onChange={e => setPayroll(e.target.value)}
             maxLength={20}
@@ -99,25 +116,27 @@ function NewUserForm({ onCreated }) {
           />
         </div>
         <div>
-          <Label htmlFor="new-user-role">Rol</Label>
-          <Select id="new-user-role" block={false} value={role} onChange={e => setRole(e.target.value)}>
+          <Label htmlFor={`${idPrefix}-role`}>Rol</Label>
+          <Select id={`${idPrefix}-role`} block={false} value={role} onChange={e => setRole(e.target.value)}>
             {Object.values(ROLES).map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
           </Select>
         </div>
-        <label className="flex items-center gap-2 py-1.5 text-sm text-text">
-          <input type="checkbox" checked={champion} onChange={e => setChampion(e.target.checked)} className="size-4 accent-accent" />
-          Champion
-        </label>
         <Button type="submit" variant="primary" disabled={!isValid || busy}>
           <UserPlus size={16} /> {busy ? 'Agregando…' : 'Agregar'}
         </Button>
       </form>
-      <p className="mt-2 text-xs text-text-faint">El usuario inicia sesión con este nombre. No importan mayúsculas ni acentos. {CONTACT_HINT}</p>
+      <p className="mt-2 text-xs text-text-faint">
+        {champion
+          ? 'Aparecerá como opción del área en el formulario de manitas. El correo es obligatorio: ahí se le avisa de las manitas a su cargo.'
+          : `El usuario inicia sesión con este nombre. No importan mayúsculas ni acentos. ${CONTACT_HINT}`}
+      </p>
 
       {error && <div className="mt-3"><StatusMessage error={error} /></div>}
       {created && (
         <div role="status" className="glass mt-3 rounded-control border border-success/25 bg-success/10 p-3 text-sm text-text">
-          Usuario <strong>{created.name}</strong> agregado ({ROLE_LABELS[created.role]}{created.champion ? ', champion' : ''}).
+          {champion
+            ? <>Champion <strong>{created.name}</strong> agregado ({created.area}, {ROLE_LABELS[created.role]}).</>
+            : <>Usuario <strong>{created.name}</strong> agregado ({ROLE_LABELS[created.role]}).</>}
         </div>
       )}
     </section>
@@ -159,20 +178,6 @@ export default function UsersPage() {
     }
   }
 
-  async function saveChampion(target, champion) {
-    setBusyId(target.id);
-    setError(null);
-    try {
-      const updated = await saveUser(target.id, { champion });
-      setUsers(list => list.map(u => (u.id === updated.id ? updated : u)));
-      if (updated.id === me.id) updateUser(updated);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusyId(null);
-    }
-  }
-
   async function confirmDelete() {
     setBusyId(deleting.id);
     setDeleteError(null);
@@ -185,6 +190,10 @@ export default function UsersPage() {
     } finally {
       setBusyId(null);
     }
+  }
+
+  function handleCreated(created) {
+    setUsers(list => [...(list ?? []), created].sort(byName));
   }
 
   function handleEdited(updated) {
@@ -211,10 +220,11 @@ export default function UsersPage() {
   return (
     <PageContainer size="lg">
       <h1 className="text-2xl font-semibold text-text">Usuarios</h1>
-      <p className="mt-1 text-sm text-text-muted">Agrega usuarios y define quién es administrador. Haz clic en un usuario para editar sus datos.</p>
+      <p className="mt-1 text-sm text-text-muted">Agrega usuarios y champions, y define quién es administrador. Haz clic en un usuario para editar sus datos.</p>
 
       <div className="mt-6 space-y-4">
-        <NewUserForm onCreated={created => setUsers(list => [...(list ?? []), created].sort(byName))} />
+        <NewUserForm onCreated={handleCreated} />
+        <NewUserForm champion onCreated={handleCreated} />
 
         {users === null && <StatusMessage loading />}
         {error && !confirmRole && <StatusMessage error={error} />}
@@ -227,7 +237,7 @@ export default function UsersPage() {
                 type="search"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
-                placeholder="Buscar por nombre, correo, nómina o rol…"
+                placeholder="Buscar por nombre, correo, nómina, rol o área…"
                 aria-label="Buscar usuarios"
                 className="pl-9"
               />
@@ -244,7 +254,7 @@ export default function UsersPage() {
                     <th className="px-4 py-3 font-medium">Correo</th>
                     <th className="px-4 py-3 font-medium">Nómina</th>
                     <th className="px-4 py-3 font-medium">Registrado</th>
-                    <th className="px-4 py-3 text-center font-medium">Champion</th>
+                    <th className="px-4 py-3 text-center font-medium">Champion (área)</th>
                     <th className="px-4 py-3 font-medium">Rol</th>
                     <th className="px-4 py-3"><span className="sr-only">Eliminar</span></th>
                   </tr>
@@ -253,14 +263,17 @@ export default function UsersPage() {
                   {shown.map(u => (
                     <tr
                       key={u.id}
-                      onClick={() => setEditingUser(u)}
-                      title="Editar usuario"
-                      className="cursor-pointer border-b border-white/40 hover:bg-white/50"
+                      // The default admin cannot be edited by anyone else
+                      onClick={u.system ? undefined : () => setEditingUser(u)}
+                      title={u.system ? 'El administrador predeterminado no se puede editar' : 'Editar usuario'}
+                      className={`border-b border-white/40 ${u.system ? '' : 'cursor-pointer hover:bg-white/50'}`}
                     >
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-3">
                           <UserAvatar user={u} size={32} />
-                          <button type="button" className="text-left font-medium text-text hover:text-accent hover:underline">{u.name}</button>
+                          {u.system
+                            ? <span className="font-medium text-text">{u.name}</span>
+                            : <button type="button" className="text-left font-medium text-text hover:text-accent hover:underline">{u.name}</button>}
                           {u.id === me.id && (
                             <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent">Tú</span>
                           )}
@@ -269,24 +282,26 @@ export default function UsersPage() {
                       <td className="px-4 py-2.5 text-text-muted">{u.email ?? '—'}</td>
                       <td className="whitespace-nowrap px-4 py-2.5 text-text-muted">{u.payroll ?? '—'}</td>
                       <td className="whitespace-nowrap px-4 py-2.5 text-text-muted">{dateFormat.format(new Date(u.createdAt))}</td>
-                      {/* Champion and role are changed in place: their clicks must not open the edit window */}
-                      <td className="cursor-default px-4 py-2.5 text-center" onClick={e => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={u.champion}
-                          onChange={e => saveChampion(u, e.target.checked)}
-                          disabled={busyId === u.id}
-                          aria-label={`${u.name} es champion`}
-                          className="size-4 cursor-pointer align-middle accent-accent disabled:cursor-wait"
-                        />
+                      {/* Champions are added with their own form: here just their area is shown */}
+                      <td className="px-4 py-2.5 text-center">
+                        {u.champion
+                          ? (
+                            <span title="Champion" className="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent">
+                              {u.area ?? 'Champion'}
+                            </span>
+                          )
+                          : <span className="text-text-faint">—</span>}
                       </td>
+                      {/* The role is changed in place: its clicks must not open the edit window */}
                       <td className="cursor-default px-4 py-2.5" onClick={e => e.stopPropagation()}>
                         <Select
                           block={false}
                           value={u.role}
                           onChange={e => handleRoleChange(u, e.target.value)}
-                          disabled={busyId === u.id || (u.role === ROLES.ADMIN && admins === 1)}
-                          title={u.role === ROLES.ADMIN && admins === 1 ? 'Debe quedar al menos un administrador' : undefined}
+                          disabled={busyId === u.id || u.system || (u.role === ROLES.ADMIN && admins === 1)}
+                          title={u.system
+                            ? 'El administrador predeterminado siempre es administrador'
+                            : u.role === ROLES.ADMIN && admins === 1 ? 'Debe quedar al menos un administrador' : undefined}
                           aria-label={`Rol de ${u.name}`}
                         >
                           {Object.values(ROLES).map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
@@ -296,8 +311,10 @@ export default function UsersPage() {
                         <button
                           type="button"
                           onClick={() => { setDeleteError(null); setDeleting(u); }}
-                          disabled={busyId === u.id || u.id === me.id}
-                          title={u.id === me.id ? 'No puedes eliminar tu propio usuario' : `Eliminar a ${u.name}`}
+                          disabled={busyId === u.id || u.id === me.id || u.system}
+                          title={u.system
+                            ? 'El administrador predeterminado no se puede eliminar'
+                            : u.id === me.id ? 'No puedes eliminar tu propio usuario' : `Eliminar a ${u.name}`}
                           aria-label={`Eliminar a ${u.name}`}
                           className="rounded-control p-2 text-text-muted transition-all hover:bg-danger/10 hover:text-danger
                             disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-text-muted"

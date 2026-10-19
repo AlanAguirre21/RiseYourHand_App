@@ -32,6 +32,16 @@ const validPayroll = (raw) => {
   return payroll;
 };
 
+const AREA_MAX_LENGTH = 100;
+
+const validArea = (raw) => {
+  const area = typeof raw === 'string' ? raw.trim().replace(/\s+/g, ' ') : '';
+  if (!area || area.length > AREA_MAX_LENGTH) {
+    throw httpError(400, `Escribe el área o departamento a cargo del champion (máximo ${AREA_MAX_LENGTH} caracteres).`);
+  }
+  return area;
+};
+
 // Email and payroll number are optional one by one: empty means "none" (undefined, so it is not stored)
 const isEmpty = (raw) => raw == null || (typeof raw === 'string' && raw.trim() === '');
 const optionalEmail = (raw) => (isEmpty(raw) ? undefined : validEmail(raw));
@@ -40,11 +50,6 @@ const optionalPayroll = (raw) => (isEmpty(raw) ? undefined : validPayroll(raw));
 // A user needs at least one of the two besides the name
 const assertContact = (email, payroll) => {
   if (!email && !payroll) throw httpError(400, 'Escribe el correo electrónico o el número de nómina (al menos uno).');
-};
-
-const validChampion = (raw) => {
-  if (typeof raw !== 'boolean') throw httpError(400, 'El campo champion debe ser verdadero o falso.');
-  return raw;
 };
 
 // Names are unique ignoring case and accents, also against inactive users (the index covers them)
@@ -74,14 +79,22 @@ export const findById = (id) =>
 export const findByName = (name) =>
   User.findOne({ name: cleanName(name), active: true }).collation(NAME_COLLATION);
 
-// The app must always have an admin. If there is none, the default one is created (or, when a user
-// with that name already exists, promoted and reactivated). Returns its name, or null if nothing was needed
+// The users that can be picked as the answer of the form: every active one but the default admin
+export const findPickable = () =>
+  User.find({ active: true, system: { $ne: true } }).collation(NAME_COLLATION).sort({ name: 1 });
+
+const SYSTEM_STATE = { role: ROLES.ADMIN, active: true, system: true, champion: false };
+
+// The default admin always exists, as an active admin. It is created on start (or, when a user with
+// that name already exists, made the default admin) and put back as it must be if it was changed by
+// hand in the database. Returns its name when something was done, null when it was already right
 export const ensureAdmin = async () => {
-  if ((await countAdmins()) > 0) return null;
+  const filter = { name: DEFAULT_ADMIN_NAME, ...SYSTEM_STATE };
+  if (await User.exists(filter).collation(NAME_COLLATION)) return null;
   try {
     await User.updateOne(
       { name: DEFAULT_ADMIN_NAME },
-      { $set: { role: ROLES.ADMIN, active: true }, $setOnInsert: { name: DEFAULT_ADMIN_NAME } },
+      { $set: SYSTEM_STATE, $setOnInsert: { name: DEFAULT_ADMIN_NAME } },
       { upsert: true, collation: NAME_COLLATION },
     );
   } catch (err) {
@@ -90,31 +103,57 @@ export const ensureAdmin = async () => {
   return DEFAULT_ADMIN_NAME;
 };
 
-// Creates the champions of seed/default_champions.json that no user has the name of yet (active or
-// not). Existing users are left as they are, so a champion an admin unmarked or removed stays that way.
-// Email and payroll number are optional here.
-// Returns the names created and the entries that could not be created, with the reason
+// The champions of the question for champions: active, and with the area in their charge
+export const findChampions = () =>
+  User.find({ champion: true, active: true, area: { $nin: [null, ''] } })
+    .collation(NAME_COLLATION).sort({ area: 1, name: 1 }).lean();
+
+// A champion is a user with the area in their charge: the ones of seed/default_champions.json and
+// the ones an admin adds. On start, the champions of the file that no user has the name of yet
+// (active or not) are created, and existing users with those names are marked as champions. The
+// area of the file is only given to the ones that have none, so an area an admin changed stays.
+// Users marked as champion before champions had an area (and not in the file) are unmarked. Email and payroll number are optional here.
+// Returns the names created, the names unmarked and the entries that failed, with the reason
 export const ensureDefaultChampions = async () => {
   if (!Array.isArray(defaultChampions)) throw new Error('seed/default_champions.json must be a list');
   const created = [];
   const failed = [];
+  const names = [];
 
   for (const entry of defaultChampions) {
-    const { name, email, payroll } = entry ?? {};
+    const { name, email, payroll, area } = entry ?? {};
     try {
-      if (await User.exists({ name: cleanName(name) }).collation(NAME_COLLATION)) continue;
+      const cleanArea = validArea(area);
+      names.push(validName(name));
+      const existing = await User.findOne({ name: cleanName(name) }).collation(NAME_COLLATION);
+      if (existing?.system) throw new Error('it is the name of the default admin');
+      if (existing) {
+        if (!existing.champion || !existing.area) {
+          existing.champion = true;
+          existing.area ||= cleanArea;
+          await existing.save();
+        }
+        // Still listed in the form, but nobody can pick a deleted user
+        if (!existing.active) failed.push({ name: existing.name, reason: 'the user was deleted' });
+        continue;
+      }
       const user = await create({
         name,
         email,
         payroll: typeof payroll === 'number' ? String(payroll) : payroll,
         champion: true,
+        area: cleanArea,
       }, { requireContact: false });
       created.push(user.name);
     } catch (err) {
       failed.push({ name: String(name), reason: err.message });
     }
   }
-  return { created, failed };
+
+  const unmarked = await User.find({ champion: true, area: { $in: [null, ''] }, name: { $nin: names } })
+    .collation(NAME_COLLATION);
+  await User.updateMany({ _id: { $in: unmarked.map((u) => u._id) } }, { $set: { champion: false } });
+  return { created, unmarked: unmarked.map((u) => u.name), failed };
 };
 
 export const login = async (name) => {
@@ -125,23 +164,35 @@ export const login = async (name) => {
 };
 
 // requireContact is false only for the users the app creates by itself (seed files), which may come
-// with just the name, like the default admin: they can add their email or payroll number later
-export const create = async ({ name, email, payroll, champion = false, role = ROLES.USER }, { requireContact = true } = {}) => {
+// with just the name, like the default admin: they can add their email or payroll number later.
+// A champion needs the area in their charge and, unless it comes from the seed file, an email
+// (the manitas assigned to them are sent there)
+export const create = async ({ name, email, payroll, champion = false, area, role = ROLES.USER }, { requireContact = true } = {}) => {
   const clean = validName(name);
   const cleanEmail = optionalEmail(email);
   const cleanPayroll = optionalPayroll(payroll);
   if (requireContact) assertContact(cleanEmail, cleanPayroll);
-  const isChampion = validChampion(champion);
+  const isChampion = champion === true;
+  const cleanArea = isChampion ? validArea(area) : undefined;
+  if (isChampion && requireContact && !cleanEmail) throw httpError(400, 'Escribe el correo electrónico del champion.');
   if (!Object.values(ROLES).includes(role)) throw httpError(400, 'Rol no válido.');
   await assertNameFree(clean);
   if (cleanEmail) await assertEmailFree(cleanEmail);
   if (cleanPayroll) await assertPayrollFree(cleanPayroll);
-  return User.create({ name: clean, email: cleanEmail, payroll: cleanPayroll, champion: isChampion, role });
+  return User.create({ name: clean, email: cleanEmail, payroll: cleanPayroll, champion: isChampion, area: cleanArea, role });
 };
 
 export const updateProfile = async (user, { name, email, payroll, avatar }) => {
   if (name !== undefined) {
     const clean = validName(name);
+    // Champions are matched by name with default_champions.json, and their manitas keep the name
+    if (user.champion && clean !== user.name) {
+      throw httpError(409, 'El nombre de un champion no se puede cambiar.');
+    }
+    // The default admin is found by its name on every start
+    if (user.system && clean !== user.name) {
+      throw httpError(409, 'El nombre del administrador predeterminado no se puede cambiar.');
+    }
     await assertNameFree(clean, user._id);
     user.name = clean;
   }
@@ -168,30 +219,31 @@ export const remove = async (id, actor) => {
   const user = await findById(id);
   if (!user) throw httpError(404, 'Usuario no encontrado.');
   if (user._id.equals(actor._id)) throw httpError(409, 'No puedes eliminar tu propio usuario.');
+  if (user.system) throw httpError(409, 'El administrador predeterminado no se puede eliminar.');
   user.active = false;
   return user.save();
 };
 
-// For admins: the name, email, payroll number and champion flag of any user
-export const updateById = async (id, { name, email, payroll, champion }) => {
+// For admins: the name, email and payroll number of any user, and the area of a champion. The
+// default admin is not editable by anyone else (it edits its own data, but its name, in its profile)
+export const updateById = async (id, { name, email, payroll, area }) => {
   const user = await findById(id);
   if (!user) throw httpError(404, 'Usuario no encontrado.');
-  if (champion !== undefined) user.champion = validChampion(champion);
+  if (user.system) throw httpError(403, 'El administrador predeterminado no se puede editar.');
+  if (area !== undefined) {
+    if (!user.champion) throw httpError(400, 'Solo los champions tienen un área a cargo.');
+    user.area = validArea(area);
+  }
   return updateProfile(user, { name, email, payroll });
-};
-
-// Open to any logged user, from the form: it only turns the flag on. Turning it off is for admins
-export const markChampion = async (id) => {
-  const user = await findById(id);
-  if (!user) throw httpError(404, 'Usuario no encontrado.');
-  user.champion = true;
-  return user.save();
 };
 
 export const updateRole = async (id, role) => {
   if (!Object.values(ROLES).includes(role)) throw httpError(400, 'Rol no válido.');
   const user = await findById(id);
   if (!user) throw httpError(404, 'Usuario no encontrado.');
+  if (user.system && role !== ROLES.ADMIN) {
+    throw httpError(409, 'El administrador predeterminado siempre es administrador.');
+  }
 
   if (user.role === ROLES.ADMIN && role !== ROLES.ADMIN && (await countAdmins()) <= 1) {
     throw httpError(409, 'Debe quedar al menos un administrador.');

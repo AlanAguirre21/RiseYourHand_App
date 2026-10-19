@@ -59,11 +59,16 @@ export default function PersonalInfoCard({ user, onSaved }) {
             value={values.name}
             onChange={setField('name')}
             maxLength={100}
+            readOnly={user.champion || user.system}
             autoComplete="name"
             aria-describedby="profile-name-hint"
           />
           <p id="profile-name-hint" className="mt-1 text-xs text-text-faint">
-            Es el nombre con el que inicias sesión. Si lo cambias, usa el nuevo la próxima vez.
+            {user.system
+              ? 'Eres el administrador predeterminado: tu nombre no se puede cambiar.'
+              : user.champion
+                ? 'Eres champion: tu nombre no se puede cambiar, porque así aparece en las manitas a tu cargo.'
+                : 'Es el nombre con el que inicias sesión. Si lo cambias, usa el nuevo la próxima vez.'}
           </p>
         </div>
 
@@ -87,11 +92,14 @@ export default function PersonalInfoCard({ user, onSaved }) {
               value={values.payroll}
               onChange={setField('payroll')}
               maxLength={20}
+              readOnly={user.system}
               autoComplete="off"
-              placeholder="p. ej. 123456"
+              placeholder={user.system ? undefined : 'p. ej. 123456'}
             />
           </div>
-          <p className="-mt-2 text-xs text-text-faint sm:col-span-2">{CONTACT_HINT}</p>
+          <p className="-mt-2 text-xs text-text-faint sm:col-span-2">
+            {user.system ? 'Eres el administrador predeterminado: solo puedes cambiar tu correo electrónico.' : CONTACT_HINT}
+          </p>
         </div>
 
         {user.createdAt && (

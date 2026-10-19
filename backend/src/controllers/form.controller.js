@@ -19,6 +19,11 @@ export const updateResponse = async (req, res) => {
   res.json(await responseService.update(req.params.id, req.body));
 };
 
+// Admins only (see form.routes.js). Marks a finished manita as awarded, or takes it back
+export const updateResponseAward = async (req, res) => {
+  res.json(await responseService.updateAward(req.params.id, req.body));
+};
+
 // Start or advance of a manita, with its evidence. Admins, or the champion in charge of it
 export const updateResponseTracking = async (req, res) => {
   res.json(await responseService.updateTracking(req.params.id, req.body, req.user));

@@ -14,9 +14,13 @@ const UserSchema = new Schema({
     email:   { type: String, trim: true, lowercase: true, maxlength: 100 },
     payroll: { type: String, trim: true, uppercase: true, maxlength: 20 },
     champion: { type: Boolean, default: false },   // can be in charge of manitas
+    area:   { type: String, trim: true, maxlength: 100 },   // champions: the area or department in their charge
     role:   { type: String, enum: Object.values(ROLES), default: ROLES.USER },
     avatar: { type: String, default: null, maxlength: AVATAR_MAX_LENGTH, match: AVATAR_PATTERN },
     active: { type: Boolean, default: true },
+    // The default admin (DEFAULT_ADMIN_NAME), created on start: always an admin, cannot be deleted
+    // nor renamed, and is not offered as the answer of the form
+    system: { type: Boolean, default: false },
 }, { timestamps: true });
 
 UserSchema.index({ name: 1 }, { unique: true, collation: NAME_COLLATION });
@@ -32,8 +36,10 @@ export const toPublicUser = u => ({
   email: u.email ?? null,
   payroll: u.payroll ?? null,
   champion: u.champion ?? false,
+  area: u.area ?? null,
   role: u.role,
   avatar: u.avatar ?? null,
+  system: u.system ?? false,
   createdAt: u.createdAt,
 });
 

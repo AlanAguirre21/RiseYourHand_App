@@ -3,5 +3,5 @@ export const ROLES = {
   USER: 'user',
 };
 
-// Created automatically whenever the app has no admin (see ensureAdmin in user.service.js)
+// Created automatically on start, always an admin and undeletable (see ensureAdmin in user.service.js)
 export const DEFAULT_ADMIN_NAME = 'Admin 01';

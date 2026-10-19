@@ -64,18 +64,25 @@ export default function AvatarEditor({ user, onSaved }) {
       <UserAvatar user={user} size={112} className="neu-raised" />
       <p className="mt-4 max-w-full truncate text-lg font-semibold text-text">{user.name}</p>
 
-      <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} className="sr-only" tabIndex={-1} aria-hidden="true" />
-      <div className="mt-4 flex flex-wrap justify-center gap-2">
-        <Button variant="primary" onClick={() => inputRef.current.click()} disabled={busy}>
-          <Camera size={16} /> {busy ? 'Guardando…' : user.avatar ? 'Cambiar foto' : 'Subir foto'}
-        </Button>
-        {user.avatar && (
-          <Button onClick={() => save(null)} disabled={busy}>
-            <Trash2 size={16} /> Quitar
-          </Button>
-        )}
-      </div>
-      <p className="mt-3 text-xs text-text-faint">Se recorta al centro en forma cuadrada.</p>
+      {/* The default admin can only change its email */}
+      {user.system ? (
+        <p className="mt-3 text-xs text-text-faint">El administrador predeterminado no puede cambiar su foto.</p>
+      ) : (
+        <>
+          <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} className="sr-only" tabIndex={-1} aria-hidden="true" />
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            <Button variant="primary" onClick={() => inputRef.current.click()} disabled={busy}>
+              <Camera size={16} /> {busy ? 'Guardando…' : user.avatar ? 'Cambiar foto' : 'Subir foto'}
+            </Button>
+            {user.avatar && (
+              <Button onClick={() => save(null)} disabled={busy}>
+                <Trash2 size={16} /> Quitar
+              </Button>
+            )}
+          </div>
+          <p className="mt-3 text-xs text-text-faint">Se recorta al centro en forma cuadrada.</p>
+        </>
+      )}
 
       {error && <div className="mt-3 w-full text-left"><StatusMessage error={error} /></div>}
     </section>

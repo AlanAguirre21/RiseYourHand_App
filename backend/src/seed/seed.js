@@ -16,13 +16,14 @@ try {
   // Drops indexes the schema no longer has (the old unique "username") and builds the unique "name" one
   await User.syncIndexes();
   const defaultAdmin = await ensureAdmin();
-  console.log(defaultAdmin ? `No admin found: "${defaultAdmin}" is now an admin` : 'Admin user: already exists');
+  console.log(defaultAdmin ? `Default admin "${defaultAdmin}" created or restored` : 'Default admin: already exists');
 
   const champions = await ensureDefaultChampions();
   console.log(champions.created.length
     ? `Default champions created: ${champions.created.join(', ')}`
     : 'Default champions: nothing to create');
-  for (const { name, reason } of champions.failed) console.warn(`Default champion "${name}" not created: ${reason}`);
+  if (champions.unmarked.length) console.log(`No longer champions (not in default_champions.json): ${champions.unmarked.join(', ')}`);
+  for (const { name, reason } of champions.failed) console.warn(`Default champion "${name}": ${reason}`);
 
   // Builds the unique "folio" index, then numbers the responses saved before it existed
   await Response.syncIndexes();
