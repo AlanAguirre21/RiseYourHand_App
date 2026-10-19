@@ -195,7 +195,23 @@ Todas las rutas cuelgan de `/api`. La sesión se envía como `Authorization: Bea
 2. Pulsa **Copiar enlace** en la sección «Exportar a Power BI».
 3. En Power BI: **Obtener datos → Web** y pega el enlace.
 
-El CSV tiene una fila por respuesta, de la más reciente a la más antigua, con estas columnas: `user` (quién la registró), una columna por pregunta y una por campo calculado. Los encabezados son las claves (`key`) de `form.json`. Las respuestas de opción múltiple se separan con `; `.
+El CSV tiene una fila por manita, de la más reciente a la más antigua, con estas columnas:
+
+| Columna | Clave de `form.json` | Contenido |
+|---------|----------------------|-----------|
+| Champion | `champion` | Champion a cargo |
+| Nombre manita | `hand_name` | Nombre de la manita |
+| Color | `color` | Color de la manita |
+| Estatus | `status` | `Not Started`, `In Progress` o `Completed`, según su seguimiento |
+| Alerta | `alert` | Situación respecto al vencimiento |
+| Fecha creación | `creation_date` | Fecha de creación |
+| Fecha vencimiento | `expiration_date` | Fecha de vencimiento |
+| Área | `area` | Área donde se detectó |
+| Dias transcurridos | `days_gone` | Días transcurridos desde la creación |
+| Días para vencimiento | `expiration_days` | Días para el vencimiento |
+| Descripción | — | Descripción del problema: la respuesta a la última pregunta abierta de la manita (la de su color) |
+
+Las columnas se definen en `EXPORT_COLUMNS` (`backend/src/services/response.service.js`).
 
 A tener en cuenta:
 

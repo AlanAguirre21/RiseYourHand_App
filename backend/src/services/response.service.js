@@ -10,8 +10,6 @@ import { TRACKING, answerOf, isStarted, trackingOf } from '../utils/tracking.js'
 
 export const OPEN_MAX_LENGTH = 1000;
 const LIST_LIMIT = 500;
-const USER_COLUMN = 'user';   // first column of the export: who filled the response
-const FOLIO_COLUMN = 'folio';
 const FOLIO_COUNTER = 'response_folio';
 
 const badRequest = (msg) => Object.assign(new Error(msg), { status: 400 });
@@ -367,40 +365,61 @@ export const listOf = async (user) => {
   });
 };
 
-// Every response as one table (header first), newest first: one row per response and one column
-// per question and computed field. The columns cover all the form versions and are named after
-// the keys of form.json; a response leaves empty the ones its version did not have
+// Columns of the export, in this order, with "header" as their name. "key" is the key of form.json
+// they come from:
+//   answer    - the answer of that question
+//   computed  - that computed field
+//   status    - Not Started / In Progress / Completed, from the tracking of the manita (the stored
+//               answer is not kept in step with it)
+//   description - the answer to the last open question the manita has: the one where the problem is
+//               described, whichever its color is (yellow_machine, red_safety, cis_anomaly...)
+const EXPORT_COLUMNS = [
+  { header: 'Champion',              key: 'champion',        from: 'answer' },
+  { header: 'Nombre manita',         key: 'hand_name',       from: 'computed' },
+  { header: 'Color',                 key: 'color',           from: 'answer' },
+  { header: 'Estatus',               key: 'status',          from: 'status' },
+  { header: 'Alerta',                key: 'alert',           from: 'computed' },
+  { header: 'Fecha creación',        key: 'creation_date',   from: 'answer' },
+  { header: 'Fecha vencimiento',     key: 'expiration_date', from: 'answer' },
+  { header: 'Área',                  key: 'area',            from: 'answer' },
+  { header: 'Dias transcurridos',    key: 'days_gone',       from: 'computed' },
+  { header: 'Días para vencimiento', key: 'expiration_days', from: 'computed' },
+  { header: 'Descripción',           key: 'description',     from: 'description' },
+];
+
+const statusOf = (response) => {
+  const { started, completedAt } = trackingOf(response);
+  if (completedAt) return 'Completed';
+  return started ? 'In Progress' : 'Not Started';
+};
+
+const descriptionOf = (form, answers) => {
+  const open = (form?.sections ?? []).flatMap((s) => s.questions).filter((q) => q.type === 'open');
+  const answered = open.filter((q) => typeof answers.get(q.key) === 'string' && answers.get(q.key).trim());
+  return answered.length ? answers.get(answered.at(-1).key) : '';
+};
+
+// Every response as one table (header first), newest first: one row per response with the columns
+// of EXPORT_COLUMNS. Each response is read with the form version it was filled with
 export const exportTable = async () => {
   const [responses, versions] = await Promise.all([
-    Response.find({ formKey: FORM_KEY }).sort({ createdAt: -1 }).populate('user', 'name').lean(),
+    Response.find({ formKey: FORM_KEY }).sort({ createdAt: -1 }).lean(),
     listVersions(),
   ]);
-
   const forms = new Map(versions.map((f) => [f.version, f]));
-  // Keys in the order of the latest form; the ones only older versions had come after
-  const questions = new Set();
-  const computed = new Set();
-  for (const section of versions.toReversed().flatMap((f) => f.sections)) {
-    for (const q of section.questions) questions.add(q.key);
-    for (const c of section.computed ?? []) computed.add(c.key);
-  }
-
-  const header = [FOLIO_COLUMN, USER_COLUMN, ...questions, ...computed];
 
   const rows = responses.map((r) => {
     const form = forms.get(r.formVersion);
     const answers = new Map(r.answers.map((a) => [a.questionKey, a.value]));
     const fields = new Map((form ? computeFields(form, r.answers, { folio: r.folio ?? null }) : []).map((c) => [c.key, c.value]));
-    return [
-      r.folio ?? '',
-      r.user?.name ?? '',
-      ...[...questions].map((key) => {
-        const value = answers.get(key);
-        return Array.isArray(value) ? value.join('; ') : value;
-      }),
-      ...[...computed].map((key) => fields.get(key)),
-    ];
+    return EXPORT_COLUMNS.map(({ key, from }) => {
+      if (from === 'computed') return fields.get(key);
+      if (from === 'status') return statusOf(r);
+      if (from === 'description') return descriptionOf(form, answers);
+      const value = answers.get(key);
+      return Array.isArray(value) ? value.join('; ') : value;
+    });
   });
 
-  return [header, ...rows];
+  return [EXPORT_COLUMNS.map((c) => c.header), ...rows];
 };
