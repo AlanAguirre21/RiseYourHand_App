@@ -4,8 +4,10 @@ Aplicación web para registrar «manitas» (sugerencias de mejora) mediante un f
 
 ## Qué hace
 
-- **Formulario tipo chat.** Solo para administradores. Se responde pregunta por pregunta: texto libre, opción única, opción múltiple, fecha o un usuario registrado (que se puede dar de alta ahí mismo).
-- **Registro de respuestas.** Cada usuario ve su historial; los administradores ven las respuestas de todos.
+- **Formulario tipo chat.** Para cualquier usuario con sesión. Se responde pregunta por pregunta: texto libre, opción única, opción múltiple, fecha o un usuario registrado (que se puede dar de alta ahí mismo).
+- **Registro de respuestas.** Cada manita recibe un folio consecutivo. Cada usuario ve su historial; los administradores ven las respuestas de todos.
+- **Seguimiento con evidencias.** Un administrador o el champion a cargo inicia la manita y actualiza su avance (0–100 %); cada cambio guarda una evidencia con comentario y, opcionalmente, una foto.
+- **Dashboard.** Gráficas de las manitas para administradores.
 - **Campos calculados.** A partir de las fechas se obtienen la situación de la manita (En tiempo, Por vencer, Vence hoy, Vencida), los días transcurridos y los días para su vencimiento. Se calculan al leer, no se guardan.
 - **Exportación a Power BI.** Un enlace devuelve todas las respuestas como una tabla CSV.
 - **Usuarios y roles.** El acceso es solo por nombre, sin contraseña. Hay dos roles: `user` y `admin`.
@@ -33,11 +35,11 @@ LevantaMano_Project/
 │       ├── constants/      Roles
 │       ├── controllers/    Manejo de las peticiones
 │       ├── middlewares/    Sesión, roles y errores
-│       ├── models/         User, Form, Response
+│       ├── models/         User, Form, Response, Evidence, Counter
 │       ├── routes/         /api/auth, /api/users, /api/form
-│       ├── seed/           form.json (definición del formulario) y seed.js
+│       ├── seed/           form.json (formulario), default_champions.json y seed.js
 │       ├── services/       Lógica de negocio
-│       └── utils/          Campos calculados y CSV
+│       └── utils/          Campos calculados, seguimiento y CSV
 ├── frontend/
 │   ├── public/             Archivos que se copian tal cual a dist (icono de la pestaña)
 │   └── src/
@@ -45,9 +47,9 @@ LevantaMano_Project/
 │       ├── auth/           Sesión y protección de rutas
 │       ├── components/     Componentes de interfaz
 │       ├── constants/      Estilos y roles
-│       ├── hooks/          useAuth, useFormChat
+│       ├── hooks/          useAuth, useFormChat, useLiveData
 │       ├── pages/          Páginas de la aplicación
-│       └── utils/          Formato de respuestas
+│       └── utils/          Respuestas, fechas, dashboard y correo al champion
 ├── DESIGN_SYSTEM.md        Guía visual
 ├── ecosystem.config.js     Configuración de pm2 para producción
 └── requirements.txt        Requisitos y dependencias
@@ -156,10 +158,12 @@ Para comprobar que está en marcha: `pm2 list` y `pm2 logs manitas-data-capture`
 | `/login` | Público | Acceso por nombre |
 | `/usuarios/nuevo` | Público | Registro de usuario |
 | `/` | Usuarios | Inicio |
-| `/formulario` | Administradores | Formulario en forma de chat |
-| `/formulario/resultado` | Administradores | Resumen de la respuesta enviada |
+| `/formulario` | Usuarios | Formulario en forma de chat |
+| `/formulario/resultado` | Usuarios | Resumen de la respuesta enviada |
 | `/perfil` | Usuarios | Perfil y avatar |
 | `/historial` | Usuarios | Respuestas propias |
+| `/seguimiento` | Usuarios | Seguimiento y evidencias de las manitas |
+| `/dashboard` | Administradores | Gráficas de las manitas |
 | `/registro` | Administradores | Respuestas de todos y exportación a Power BI |
 | `/usuarios` | Administradores | Gestión de usuarios y roles |
 
@@ -177,15 +181,17 @@ Todas las rutas cuelgan de `/api`. La sesión se envía como `Authorization: Bea
 | GET | `/users` | Admin | Lista de usuarios |
 | GET | `/users/names` | Sesión | Nombres de los usuarios, para elegirlos en el formulario |
 | PATCH | `/users/:id` | Admin | Edita el nombre, el correo, el número de nómina o, de un champion, su área (los champions iniciales, con su área, vienen de `backend/src/seed/default_champions.json`) |
+| DELETE | `/users/:id` | Admin | Desactiva un usuario (no el propio ni el admin predeterminado) |
 | PATCH | `/users/:id/role` | Admin | Cambia el rol de un usuario |
 | GET | `/form` | Sesión | Formulario vigente |
-| POST | `/form/responses` | Admin | Guarda una respuesta |
+| POST | `/form/responses` | Sesión | Guarda una respuesta |
 | GET | `/form/responses` | Sesión | Manitas propias (con el usuario como champion o como quien la reportó); con `?scope=all`, las de todos (admin) |
 | PATCH | `/form/responses/:id` | Admin | Edita las respuestas de un registro |
 | GET | `/form/dashboard` | Admin | Todas las manitas, para el dashboard |
 | GET | `/form/tracking` | Sesión | Todas las manitas, para la página de seguimiento (solo lectura) |
 | PATCH | `/form/responses/:id/award` | Admin | Marca una manita terminada como premiada (`{ awarded: true }`) o le quita el premio |
-| PATCH | `/form/responses/:id/tracking` | Admin | Inicia una manita o cambia su avance |
+| PATCH | `/form/responses/:id/tracking` | Admin o champion a cargo | Inicia una manita o cambia su avance; el cambio lleva evidencia (`{ comment, image? }`), opcional para admins |
+| GET | `/form/responses/:id/evidence` | Sesión | Evidencias de una manita, de la más reciente a la más antigua |
 | GET | `/form/export-key` | Admin | Clave del enlace de exportación |
 | GET | `/form/responses.csv?key=…` | Clave | Todas las respuestas en CSV |
 
