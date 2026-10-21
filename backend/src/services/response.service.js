@@ -320,6 +320,16 @@ export const updateAward = async (id, { awarded } = {}) => {
   return toPublicResponse(response, await findVersion(response.formVersion), response.user);
 };
 
+// Admins only. Deletes a response for good, with its evidences: it leaves every list, the dashboard
+// and the export. Its folio is not given again (see nextFolio)
+export const remove = async (id) => {
+  const response = mongoose.isValidObjectId(id)
+    ? await Response.findOneAndDelete({ _id: id, formKey: FORM_KEY })
+    : null;
+  if (!response) throw notFound('Respuesta no encontrada.');
+  await Evidence.deleteMany({ response: response._id });
+};
+
 // The evidences of a response, newest first, with the name of who added each one
 export const listEvidence = async (id) => {
   if (!mongoose.isValidObjectId(id) || !(await Response.exists({ _id: id, formKey: FORM_KEY }))) {

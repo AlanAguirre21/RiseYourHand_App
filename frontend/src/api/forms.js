@@ -15,6 +15,9 @@ export const listAllResponses = () => request('/form/responses?scope=all');
 export const updateResponse = (id, answers) =>
   request(`/form/responses/${id}`, { method: 'PATCH', body: { answers } });
 
+// Admins only. Deletes a manita for good, with its evidences
+export const deleteResponse = id => request(`/form/responses/${id}`, { method: 'DELETE' });
+
 // Admins only. Marks a finished manita as awarded (true), or takes the award back (false)
 export const awardResponse = (id, awarded) =>
   request(`/form/responses/${id}/award`, { method: 'PATCH', body: { awarded } });

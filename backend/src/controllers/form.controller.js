@@ -24,6 +24,12 @@ export const updateResponseAward = async (req, res) => {
   res.json(await responseService.updateAward(req.params.id, req.body));
 };
 
+// Admins only (see form.routes.js). Deletes a manita and its evidences
+export const deleteResponse = async (req, res) => {
+  await responseService.remove(req.params.id);
+  res.status(204).end();
+};
+
 // Start or advance of a manita, with its evidence. Admins, or the champion in charge of it
 export const updateResponseTracking = async (req, res) => {
   res.json(await responseService.updateTracking(req.params.id, req.body, req.user));

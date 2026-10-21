@@ -55,6 +55,7 @@ export default function ResponsesPage() {
           searchable
           statusFilter
           editable
+          deletable
           focusId={params.get('manita')}
           emptyText="Todavía no hay respuestas registradas."
         />

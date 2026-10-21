@@ -189,6 +189,7 @@ Todas las rutas cuelgan de `/api`. La sesión se envía como `Authorization: Bea
 | PATCH | `/form/responses/:id` | Admin | Edita las respuestas de un registro |
 | GET | `/form/dashboard` | Admin | Todas las manitas, para el dashboard |
 | GET | `/form/tracking` | Sesión | Todas las manitas, para la página de seguimiento (solo lectura) |
+| DELETE | `/form/responses/:id` | Admin | Elimina una manita y sus evidencias |
 | PATCH | `/form/responses/:id/award` | Admin | Marca una manita terminada como premiada (`{ awarded: true }`) o le quita el premio |
 | PATCH | `/form/responses/:id/tracking` | Admin o champion a cargo | Inicia una manita o cambia su avance; el cambio lleva evidencia (`{ comment, image? }`), opcional para admins |
 | GET | `/form/responses/:id/evidence` | Sesión | Evidencias de una manita, de la más reciente a la más antigua |

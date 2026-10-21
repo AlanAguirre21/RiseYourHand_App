@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Award, CircleCheck, Medal, Search } from 'lucide-react';
+import { Award, CircleCheck, Medal, Search, Trash2 } from 'lucide-react';
 import StatusMessage from './StatusMessage.jsx';
 import ResponseEditor from './ResponseEditor.jsx';
 import Button from './Button.jsx';
+import ConfirmModal from './ui/ConfirmModal.jsx';
 import { Input, Select } from './Input.jsx';
-import { awardResponse, getForm } from '../api/forms.js';
+import { awardResponse, deleteResponse, getForm } from '../api/forms.js';
 import { useLiveData } from '../hooks/useLiveData.js';
 import { PANEL } from '../constants/styles.js';
 import { ALL, PAGE_SIZES } from '../constants/lists.js';
@@ -32,10 +33,11 @@ const STATUS_FILTERS = {
 // that user as their champion. "focusId" is a manita to scroll to and highlight (e.g. from the
 // tracking page): every response is shown so it is on the page. "statusFilter" adds, next to the
 // search, a filter for active, finished and awarded manitas. "grayFinished" shows every finished
-// manita in the gray of the awarded ones, awarded or not, labelled just as finished
+// manita in the gray of the awarded ones, awarded or not, labelled just as finished. "deletable" adds
+// a button to delete each manita for good (the backend only lets admins)
 export default function ResponsesList({
   load, showUser = false, searchable = false, editable = false, championName = null, focusId = null,
-  statusFilter = false, grayFinished = false, emptyText,
+  statusFilter = false, grayFinished = false, deletable = false, emptyText,
 }) {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState(ALL);
@@ -43,6 +45,9 @@ export default function ResponsesList({
   const [editing, setEditing] = useState(() => new Set());   // ids of the responses being edited
   const [awarding, setAwarding] = useState(null);           // id of the response being saved
   const [awardError, setAwardError] = useState(null);       // { id, message }
+  const [deleting, setDeleting] = useState(null);           // the response asked to be deleted
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
   const focused = useRef(false);
 
   const setEditingOf = (id, on) => setEditing(ids => {
@@ -76,6 +81,20 @@ export default function ResponsesList({
       setAwardError({ id: response.id, message: err.message });
     } finally {
       setAwarding(null);
+    }
+  }
+
+  async function confirmDelete() {
+    setDeleteBusy(true);
+    setDeleteError(null);
+    try {
+      await deleteResponse(deleting.id);
+      setData(d => ({ ...d, responses: d.responses.filter(r => r.id !== deleting.id) }));
+      setDeleting(null);
+    } catch (err) {
+      setDeleteError(err.message);
+    } finally {
+      setDeleteBusy(false);
     }
   }
 
@@ -258,14 +277,14 @@ export default function ResponsesList({
                 </div>
               ))}
             </dl>
-            {editable && finished && (
+            {((editable && finished) || deletable) && (
               // Its clicks must not open the editor of the card
               <div
                 className="mt-4 flex flex-wrap items-center gap-3 border-t border-white/50 pt-3"
                 onClick={e => e.stopPropagation()}
                 onKeyDown={e => e.stopPropagation()}
               >
-                {awarded ? (
+                {editable && finished && (awarded ? (
                   <Button size="sm" onClick={() => setAwarded(response, false)} disabled={awarding === response.id}>
                     {awarding === response.id ? 'Guardando…' : 'Quitar premio'}
                   </Button>
@@ -273,14 +292,34 @@ export default function ResponsesList({
                   <Button size="sm" variant="success" onClick={() => setAwarded(response, true)} disabled={awarding === response.id}>
                     <Award size={14} /> {awarding === response.id ? 'Guardando…' : 'Marcar como premiada'}
                   </Button>
-                )}
+                ))}
                 {awarded && <span className="text-xs text-text-muted">Premiada el {formatDateTime(response.awardedAt)}</span>}
                 {awardError?.id === response.id && <span role="alert" className="text-xs text-danger">{awardError.message}</span>}
+                {deletable && (
+                  <Button size="sm" className="ml-auto" onClick={() => setDeleting(response)}>
+                    <Trash2 size={14} /> Eliminar
+                  </Button>
+                )}
               </div>
             )}
           </article>
         );
       })}
+      {deletable && (
+        <ConfirmModal
+          open={deleting !== null}
+          title={deleting?.folio != null ? `¿Eliminar la manita ${deleting.folio}?` : '¿Eliminar esta manita?'}
+          confirmLabel="Eliminar"
+          busyLabel="Eliminando…"
+          busy={deleteBusy}
+          error={deleteError}
+          onConfirm={confirmDelete}
+          onCancel={() => { setDeleting(null); setDeleteError(null); }}
+        >
+          <p>Dejará de aparecer en todas las páginas, en el dashboard y en la exportación a Power BI. También se eliminan sus evidencias.</p>
+          <p className="mt-2">Esta acción no se puede deshacer.</p>
+        </ConfirmModal>
+      )}
     </>
   );
 }
